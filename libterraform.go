@@ -16,6 +16,10 @@ import (
 	"encoding/json"
 )
 
+// **********************************************
+// Config
+// **********************************************
+
 // ShortModule is a container for a set of configuration constructs that are
 // evaluated within a common namespace.
 // Compared with module, there are fewer non-serializable fields.
@@ -62,15 +66,14 @@ func convertModule(mod *configs.Module) *ShortModule {
 	return shortMod
 }
 
-//export LoadConfigDir
-func LoadConfigDir(cPath *C.char) (cMod *C.char, cDiags *C.char, cError *C.char) {
+//export ConfigLoadConfigDir
+func ConfigLoadConfigDir(cPath *C.char) (cMod *C.char, cDiags *C.char, cError *C.char) {
 	defer func() {
 		recover()
 	}()
 
 	parser := configs.NewParser(nil)
 	path := C.GoString(cPath)
-	//fmt.Println(path)
 	mod, diags := parser.LoadConfigDir(path)
 	modBytes, err := json.Marshal(convertModule(mod))
 	if err != nil {
@@ -89,9 +92,12 @@ func LoadConfigDir(cPath *C.char) (cMod *C.char, cDiags *C.char, cError *C.char)
 	cMod = C.CString(string(modBytes))
 	cDiags = C.CString(string(diagsBytes))
 	cError = C.CString("")
-	//fmt.Println(string(modBytes), string(diagsBytes))
 	return cMod, cDiags, cError
 }
+
+// **********************************************
+// Utils
+// **********************************************
 
 //export Free
 func Free(cString *int) {

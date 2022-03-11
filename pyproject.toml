@@ -1,13 +1,13 @@
 [tool.poetry]
-name = "py-terraform"
-version = "0.0.1"
-description = "Python binding for Terraform"
+name = "libterraform"
+version = "0.1.0"
+description = "Python binding for Terraform."
 authors = ["Prodesire <wangbinxin001@126.com>"]
 license = "MIT"
 readme = "README.md"
-homepage = "https://github.com/Prodesire/py-terraform"
-repository = "https://github.com/Prodesire/py-terraform"
-keywords = ["py-terraform", "terraform"]
+homepage = "https://github.com/Prodesire/py-libterraform"
+repository = "https://github.com/Prodesire/py-libterraform"
+keywords = ["libterraform", "terraform"]
 classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
@@ -25,8 +25,9 @@ classifiers = [
     "Operating System :: Microsoft :: Windows"
 ]
 packages = [
-    { include = "py_terraform/*" },
+    { include = "libterraform/*" },
 ]
+include = ["libterraform/libterraform.so", "libterraform/libterraform.dll"]
 
 [tool.poetry.dependencies]
 python = "^3.6"
