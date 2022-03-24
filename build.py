@@ -1,8 +1,7 @@
 import os
+import platform
 import shutil
 import subprocess
-import platform
-
 
 lib_filename = 'libterraform.dll' if platform.system() == 'Windows' else 'libterraform.so'
 header_filename = 'libterraform.h'
@@ -10,6 +9,7 @@ tf_filename = 'libterraform.go'
 root = os.path.dirname(os.path.abspath(__file__))
 terraform_dirname = os.path.join(root, 'terraform')
 tf_path = os.path.join(root, tf_filename)
+tf_package_name = 'github.com/hashicorp/terraform'
 
 
 class BuildError(Exception):
@@ -31,7 +31,7 @@ def build(setup_kwargs):
     try:
         print('      - Building libterraform')
         subprocess.check_call(
-            ['go', 'build', '-buildmode=c-shared', f'-o={lib_filename}', tf_filename],
+            ['go', 'build', '-buildmode=c-shared', f'-o={lib_filename}', tf_package_name],
             cwd=terraform_dirname
         )
         shutil.move(lib_path, os.path.join(root, 'libterraform', lib_filename))
