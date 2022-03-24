@@ -34,3 +34,5 @@ coverage.txt
 # Terraform
 .terraform
 .terraform.lock.hcl
+*.tfplan
+*.tfstate

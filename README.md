@@ -2,7 +2,7 @@
 
 [![Release](https://github.com/Prodesire/py-libterraform/actions/workflows/release.yml/badge.svg)](https://github.com/Prodesire/py-libterraform/actions/workflows/release.yml)
 
-Python binding for Terraform.
+Python binding for [Terraform](https://www.terraform.io/).
 
 ## Installation
 
@@ -16,14 +16,16 @@ $ pip install libterraform
 
 `TerraformCommand` is used to invoke various Terraform commands.
 
-Currently, supports `version` and `init` commands, returning a `CommandResult` object. The `CommandResult` object has
-the following properties:
+Currently, supports `version` and all main commands (`init`, `validate`, `plan`, `show`, `apply` and `destroy`),
+returning a `CommandResult` object. The `CommandResult` object has the following properties:
 
-- `retcode` indicates the command return code. A value of 0 is normal, non-zero is abnormal.
+- `retcode` indicates the command return code. A value of 0 or 2 is normal, otherwise is abnormal.
 - `value` represents command output. If `json=True` is specified when executing the command, the output will be loaded
   as json.
 - `json` indicates whether to load the output as json.
 - `error` indicates command error output.
+
+To get Terraform verison:
 
 ```python
 >>> from libterraform import TerraformCommand
@@ -35,6 +37,18 @@ the following properties:
 <CommandResult retcode=0 json=False>
 >>> _.value
 'Terraform v1.1.7\non darwin_arm64\n'
+```
+
+To `init` and `apply` according to Terraform configuration files in the specified directory:
+
+```python
+>>> from libterraform import TerraformCommand
+>>> from tests.consts import TF_SLEEP_DIR
+>>> cli = TerraformCommand(TF_SLEEP_DIR)
+>>> cli.init()
+<CommandResult retcode=0 json=False>
+>>> cli.apply()
+<CommandResult retcode=0 json=True>
 ```
 
 Additionally, `run()` can execute arbitrary commands, returning a tuple `(retcode, stdout, stderr)`.
@@ -59,9 +73,10 @@ respectively.
 
 ```python
 >>> from libterraform import TerraformConfig
->>> mod, _ = TerraformConfig.load_config_dir('tests/tf/sleep')
+>>> from tests.consts import TF_SLEEP_DIR
+>>> mod, _ = TerraformConfig.load_config_dir(TF_SLEEP_DIR)
 >>> mod['ManagedResources'].keys()
-dict_keys(['time_sleep.wait'])
+dict_keys(['time_sleep.wait1', 'time_sleep.wait2'])
 ```
 
 
