@@ -10,6 +10,16 @@ Python binding for [Terraform](https://www.terraform.io/).
 $ pip install libterraform
 ```
 
+## Building & Testing
+
+If you want to develop this library, show know how to build and then run tests:
+
+```bash
+$ pip install poetry
+$ poetry build -f wheel
+$ pytest
+```
+
 ## Usage
 
 ### Terraform CLI
