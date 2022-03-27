@@ -1,3 +1,4 @@
 [submodule "terraform"]
 	path = terraform
 	url = https://github.com/hashicorp/terraform
+	shallow = true

@@ -4,7 +4,7 @@ from typing import List
 
 from libterraform import _lib_tf
 from libterraform.exceptions import TerraformCommandError
-from libterraform.utils import json_loads
+from libterraform.common import json_loads, WINDOWS
 
 _run_cli = _lib_tf.RunCli
 _run_cli.argtypes = [c_int64, POINTER(c_char_p), c_int64, c_int64]
@@ -99,7 +99,14 @@ class TerraformCommand:
         c_argv[:] = [arg.encode('utf-8') for arg in argv]
         r_stdout_fd, w_stdout_fd = os.pipe()
         r_stderr_fd, w_stderr_fd = os.pipe()
-        retcode = _run_cli(argc, c_argv, w_stdout_fd, w_stderr_fd)
+
+        if WINDOWS:
+            import msvcrt
+            w_stdout_handle = msvcrt.get_osfhandle(w_stdout_fd)
+            w_stderr_handle = msvcrt.get_osfhandle(w_stderr_fd)
+            retcode = _run_cli(argc, c_argv, w_stdout_handle, w_stderr_handle)
+        else:
+            retcode = _run_cli(argc, c_argv, w_stdout_fd, w_stderr_fd)
 
         with os.fdopen(r_stdout_fd) as stdout_f, os.fdopen(r_stderr_fd) as stderr_f:
             stdout = stdout_f.read()
