@@ -17,3 +17,13 @@ class TerraformCommandError(LibTerraformError):
 
     def __str__(self):
         return f'Command {self.cmd!r} returned non-zero exit status {self.retcode}.'
+
+
+class TerraformFdReadError(LibTerraformError):
+    """Raised when TerraformCommand.run() is called and cannot read stdout/stderr.
+    """
+    def __init__(self, fd):
+        self.fd = fd
+
+    def __str__(self):
+        return f'Read from fd {self.fd} error.'

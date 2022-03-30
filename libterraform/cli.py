@@ -1,9 +1,10 @@
 import os
 from ctypes import *
 from typing import List
+from threading import Thread
 
 from libterraform import _lib_tf
-from libterraform.exceptions import TerraformCommandError
+from libterraform.exceptions import TerraformCommandError, TerraformFdReadError
 from libterraform.common import json_loads, WINDOWS
 
 _run_cli = _lib_tf.RunCli
@@ -36,8 +37,8 @@ class TerraformCommand:
     def __init__(self, cwd=None):
         self.cwd = cwd
 
-    @staticmethod
-    def run(cmd, args: List[str] = None, options: dict = None, chdir=None, check=False, json=False) -> (int, str, str):
+    @classmethod
+    def run(cls, cmd, args: List[str] = None, options: dict = None, chdir=None, check=False, json=False) -> (int, str, str):
         """
         Run command with args and return a tuple (retcode, stdout, stderr).
 
@@ -100,6 +101,12 @@ class TerraformCommand:
         r_stdout_fd, w_stdout_fd = os.pipe()
         r_stderr_fd, w_stderr_fd = os.pipe()
 
+        stdout_buffer = []
+        stderr_buffer = []
+        t = Thread(target=cls._fdread, args=(r_stdout_fd, r_stderr_fd, stdout_buffer, stderr_buffer))
+        t.daemon = True
+        t.start()
+
         if WINDOWS:
             import msvcrt
             w_stdout_handle = msvcrt.get_osfhandle(w_stdout_fd)
@@ -108,13 +115,25 @@ class TerraformCommand:
         else:
             retcode = _run_cli(argc, c_argv, w_stdout_fd, w_stderr_fd)
 
-        with os.fdopen(r_stdout_fd) as stdout_f, os.fdopen(r_stderr_fd) as stderr_f:
-            stdout = stdout_f.read()
-            stderr = stderr_f.read()
+        t.join()
+        if not stdout_buffer:
+            raise TerraformFdReadError(fd=r_stdout_fd)
+        if not stderr_buffer:
+            raise TerraformFdReadError(fd=r_stderr_fd)
+        stdout = stdout_buffer[0]
+        stderr = stderr_buffer[0]
 
         if check and retcode not in (0, 2):
             raise TerraformCommandError(retcode, argv, stdout, stderr)
         return retcode, stdout, stderr
+
+    @staticmethod
+    def _fdread(stdout_fd, stderr_fd, stdout_buffer, stderr_buffer):
+        with os.fdopen(stdout_fd) as stdout_f, os.fdopen(stderr_fd) as stderr_f:
+            stdout = stdout_f.read()
+            stderr = stderr_f.read()
+            stdout_buffer.append(stdout)
+            stderr_buffer.append(stderr)
 
     def version(self, check=False, json=True, **options) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/version
