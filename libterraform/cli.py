@@ -1,10 +1,10 @@
 import os
 from ctypes import *
 from threading import Thread
-from typing import List
+from typing import List, Sequence
 
 from libterraform import _lib_tf
-from libterraform.common import json_loads, WINDOWS
+from libterraform.common import json_loads, WINDOWS, CmdType
 from libterraform.exceptions import TerraformCommandError, TerraformFdReadError
 
 _run_cli = _lib_tf.RunCli
@@ -40,8 +40,8 @@ class TerraformCommand:
     @classmethod
     def run(
             cls,
-            cmd: str,
-            args: List[str] = None,
+            cmd: CmdType,
+            args: Sequence[str] = None,
             options: dict = None,
             chdir=None,
             check: bool = False,
@@ -77,7 +77,10 @@ class TerraformCommand:
         argv = []
         if chdir:
             argv.append(f'-chdir={chdir}')
-        argv.append(cmd)
+        if isinstance(cmd, (list, tuple)):
+            argv.extend(cmd)
+        else:
+            argv.append(cmd)
         if json:
             options = options if options is not None else {}
             options.update(json=flag(json))
@@ -92,7 +95,7 @@ class TerraformCommand:
                     continue
                 if isinstance(value, list):
                     for val in value:
-                        argv += [f'-{option} {val}']
+                        argv += [f'-{option}={val}']
                     continue
                 if isinstance(value, dict):
                     for k, v in value.items():
@@ -736,9 +739,9 @@ class TerraformCommand:
             that the provider uses.
         :param check: Whether to check return code.
         :param config: Path to a directory of Terraform configuration files
-          to use to configure the provider. Defaults to pwd.
-          If no config files are present, they must be provided
-          via the input prompts or env vars.
+            to use to configure the provider. Defaults to pwd.
+            If no config files are present, they must be provided
+            via the input prompts or env vars.
         :param allow_missing_config: True to allow import when no resource configuration block exists.
         :param input: False to disable interactive prompts. Note that some actions may
             require interactive prompts and will error if input is disabled.
@@ -769,3 +772,565 @@ class TerraformCommand:
         args = [addr, id]
         retcode, stdout, stderr = self.run('import', args, options=options, chdir=self.cwd, check=check)
         return CommandResult(retcode, stdout, stderr, json=False)
+
+    def output(
+            self,
+            name: str = None,
+            check: bool = False,
+            json: bool = True,
+            no_color: bool = True,
+            state: str = None,
+            raw: bool = None,
+            **options,
+    ) -> CommandResult:
+        """Refer to https://www.terraform.io/docs/commands/output
+
+        Reads an output variable from a Terraform state file and prints
+        the value. With no additional arguments, output will display all
+        the outputs for the root module. If name is not specified, all
+        outputs are printed.
+
+        :param name: Name of output variable.
+        :param check: Whether to check return code.
+        :param json: Whether to load stdout as json.
+        :param no_color: True to output not contain any color.
+        :param state: Path to the state file to read. Defaults to "terraform.tfstate".
+        :param raw: For value types that can be automatically converted to a string,
+            will print the raw string directly, rather than a human-oriented
+            representation of the value.
+        :param options: More command options.
+        """
+        options.update(
+            no_color=flag(no_color),
+            state=state,
+            raw=flag(raw),
+        )
+        args = [name] if name else None
+        retcode, stdout, stderr = self.run('output', args, options=options, chdir=self.cwd, check=check, json=json)
+        value = json_loads(stdout) if json else stdout
+        return CommandResult(retcode, value, stderr, json=json)
+
+    def providers(
+            self,
+            subcmd: str = None,
+            args: Sequence[str] = None,
+            check: bool = False,
+            no_color: bool = True,
+            json: bool = False,
+            **options,
+    ) -> CommandResult:
+        """Refer to https://www.terraform.io/docs/commands/providers
+
+        Prints out a tree of modules in the referenced configuration annotated with
+        their provider requirements.
+
+        This provides an overview of all of the provider requirements across all
+        referenced modules, as an aid to understanding why particular provider
+        plugins are needed and why particular versions are selected.
+
+        :param subcmd: Sub commands: lock, mirror and schema.
+        :param args: Args for command.
+        :param check: Whether to check return code.
+        :param no_color: True to output not contain any color.
+        :param json: Whether to load stdout as json. Only valid when subcmd=schema.
+        :param options: More command options.
+        """
+        options.update(
+            no_color=flag(no_color),
+        )
+        cmd = ['providers']
+        if subcmd:
+            cmd.append(subcmd)
+        retcode, stdout, stderr = self.run(cmd, args=args, options=options, chdir=self.cwd, check=check, json=json)
+        value = json_loads(stdout) if json else stdout
+        return CommandResult(retcode, value, stderr, json=json)
+
+    def providers_lock(
+            self,
+            *providers,
+            check: bool = False,
+            no_color: bool = True,
+            fs_mirror: str = None,
+            net_mirror: str = None,
+            platform: str = None,
+            **options,
+    ) -> CommandResult:
+        """Refer to https://www.terraform.io/docs/commands/providers/lock
+
+        Normally the dependency lock file (.terraform.lock.hcl) is updated
+        automatically by "terraform init", but the information available to the
+        normal provider installer can be constrained when you're installing providers
+        from filesystem or network mirrors, and so the generated lock file can end
+        up incomplete.
+
+        The "providers lock" subcommand addresses that by updating the lock file
+        based on the official packages available in the origin registry, ignoring
+        the currently-configured installation strategy.
+
+        After this command succeeds, the lock file will contain suitable checksums
+        to allow installation of the providers needed by the current configuration
+        on all of the selected platforms.
+
+        By default, this command updates the lock file for every provider declared
+        in the configuration. You can override that behavior by providing one or
+        more provider source addresses on the command line.
+
+        :param check: Whether to check return code.
+        :param no_color: True to output not contain any color.
+        :param fs_mirror: Consult the given filesystem mirror directory instead of
+            the origin registry for each of the given providers.
+            This would be necessary to generate lock file entries for a provider
+            that is available only via a mirror, and not published in an upstream registry.
+            In this case, the set of valid checksums will be limited only to what Terraform
+            can learn from the data in the mirror directory.
+        :param net_mirror: Consult the given network mirror (given as a base URL)
+            instead of the origin registry for each of the given providers.
+            This would be necessary to generate lock file entries for a provider
+            that is available only via a mirror, and not published in an upstream registry.
+            In this case, the set of valid checksums will be limited only to what Terraform
+            can learn from the data in the mirror indices.
+        :param platform: Choose a target platform to request package checksums for.
+            By default, Terraform will request package checksums suitable only for
+            the platform where you run this command. Use this option multiple times
+            to include checksums for multiple target systems.
+            Target names consist of an operating system and a CPU architecture. For example,
+            "linux_amd64" selects the Linux operating system running on an AMD64 or x86_64 CPU.
+            Each provider is available only for a limited set of target platforms.
+        :param options: More command options.
+        """
+        options.update(
+            fs_mirror=fs_mirror,
+            net_mirror=net_mirror,
+            platform=platform,
+        )
+        return self.providers(subcmd='lock', args=providers, check=check, no_color=no_color, **options)
+
+    def providers_mirror(
+            self,
+            target_dir: str,
+            check: bool = False,
+            no_color: bool = True,
+            platform: str = None,
+            **options,
+    ) -> CommandResult:
+        """Refer to https://www.terraform.io/docs/commands/providers/mirror
+
+        Populates a local directory with copies of the provider plugins needed for
+        the current configuration, so that the directory can be used either directly
+        as a filesystem mirror or as the basis for a network mirror and thus obtain
+        those providers without access to their origin registries in the future.
+
+        The mirror directory will contain JSON index files that can be published
+        along with the mirrored packages on a static HTTP file server to produce
+        a network mirror. Those index files will be ignored if the directory is
+        used instead as a local filesystem mirror.
+
+        :param target_dir: Choose which target directory to build a mirror for.
+        :param check: Whether to check return code.
+        :param no_color: True to output not contain any color.
+        :param platform: Choose which target platform to build a mirror for.
+            By default, Terraform will obtain plugin packages suitable for the
+            platform where you run this command.
+            Use this flag multiple times to include packages for multiple target systems.
+            Target names consist of an operating system and a CPU architecture.
+            For example, "linux_amd64" selects the Linux operating system running
+            on an AMD64 or x86_64 CPU. Each provider is available only for a limited
+            set of target platforms.
+        :param options: More command options.
+        """
+        options.update(
+            platform=platform,
+        )
+        args = [target_dir]
+        return self.providers(subcmd='mirror', args=args, check=check, no_color=no_color, **options)
+
+    def providers_schema(
+            self,
+            check: bool = False,
+            no_color: bool = True,
+            **options,
+    ) -> CommandResult:
+        """Refer to https://www.terraform.io/docs/commands/providers
+
+        Prints out a json representation of the schemas for all providers used
+        in the current configuration.
+
+        :param check: Whether to check return code.
+        :param no_color: True to output not contain any color.
+        :param options: More command options.
+        """
+        return self.providers(subcmd='schema', check=check, no_color=no_color, json=True, **options)
+
+    def refresh(
+            self,
+            check: bool = False,
+            json: bool = True,
+            target: str = None,
+            vars: dict = None,
+            var_files: List[str] = None,
+            compact_warnings: bool = None,
+            input: bool = False,
+            lock: bool = None,
+            lock_timeout: str = None,
+            no_color: bool = True,
+            **options,
+    ) -> CommandResult:
+        """Refer to https://www.terraform.io/docs/commands/refresh
+
+        Update the state file of your infrastructure with metadata that matches
+        the physical resources they are tracking.
+
+        This will not modify your infrastructure, but it can modify your
+        state file to update metadata. This metadata might cause new changes
+        to occur when you generate a plan or call apply next.
+
+        :param check: Whether to check return code.
+        :param json: Whether to load stdout as json.
+        :param target: Resource to target. Operation will be limited to this resource and
+            its dependencies. This flag can be used multiple times.
+        :param vars: Set variables in the Terraform configuration.
+        :param var_files: Load variable values from the given files, in addition to
+            the default files terraform.tfvars and *.auto.tfvars.
+        :param compact_warnings: If Terraform produces any warnings that are not
+            accompanied by errors, shows them in a more compact form that includes
+            only the summary messages.
+        :param input: False to disable interactive prompts. Note that some actions may
+            require interactive prompts and will error if input is disabled.
+        :param lock: False to not hold a state lock during backend migration.
+            This is dangerous if others might concurrently run commands against the
+            same workspace.
+        :param lock_timeout: Duration to retry a state lock.
+        :param no_color: True to output not contain any color.
+        :param options: More command options.
+        """
+        options.update(
+            target=target,
+            var=vars,
+            var_file=var_files,
+            compact_warnings=flag(compact_warnings),
+            input=input,
+            lock=lock,
+            lock_timeout=lock_timeout,
+            no_color=flag(no_color),
+        )
+        retcode, stdout, stderr = self.run('refresh', options=options, chdir=self.cwd, check=check, json=json)
+        value = json_loads(stdout, split=True) if json else stdout
+        return CommandResult(retcode, value, stderr, json=json)
+
+    def state(
+            self,
+            subcmd: str,
+            args: Sequence[str] = None,
+            check: bool = False,
+            no_color: bool = True,
+            json: bool = False,
+            **options,
+    ) -> CommandResult:
+        """Refer to https://www.terraform.io/docs/commands/state
+
+        This command has subcommands for advanced state management.
+
+        These subcommands can be used to slice and dice the Terraform state.
+        This is sometimes necessary in advanced cases. For your safety, all
+        state management commands that modify the state create a timestamped
+        backup of the state prior to making modifications.
+
+        The structure and output of the commands is specifically tailored to work
+        well with the common Unix utilities such as grep, awk, etc. We recommend
+        using those tools to perform more advanced state tasks.
+
+        :param subcmd: Sub commands: list, mv, pull, push, replace-provider, rm and show.
+        :param args: Args for command.
+        :param check: Whether to check return code.
+        :param no_color: True to output not contain any color.
+        :param json: Whether to load stdout as json.
+        :param options: More command options.
+        """
+        options.update(
+            no_color=flag(no_color),
+        )
+        cmd = ['state', subcmd]
+        retcode, stdout, stderr = self.run(cmd, args=args, options=options, chdir=self.cwd, check=check, json=json)
+        value = json_loads(stdout) if json else stdout
+        return CommandResult(retcode, value, stderr, json=json)
+
+    def state_list(
+            self,
+            *addrs,
+            check: bool = False,
+            no_color: bool = True,
+            state: str = None,
+            ids: Sequence[str] = None,
+            **options,
+    ):
+        """Refer to https://www.terraform.io/docs/commands/state/list
+
+        List resources in the Terraform state.
+
+        An error will be returned if any of the resources or modules given as
+        filter addresses do not exist in the state.
+
+        :param addrs: Can be used to filter the instances by resource or module.
+            If no pattern is given, all resource instances are listed.
+            The addresses must either be module addresses or absolute resource
+            addresses, such as:
+                aws_instance.example
+                module.example
+                module.example.module.child
+                module.example.aws_instance.example
+        :param check: Whether to check return code.
+        :param no_color: True to output not contain any color.
+        :param state: Path to a Terraform state file to use to look up
+            Terraform-managed resources. By default, Terraform will consult
+            the state of the currently-selected workspace.
+        :param ids: Filters the results to include only instances whose
+            resource types have an attribute named "id" whose value is in
+            the given ids.
+        :param options: More command options.
+        """
+        options.update(
+            id=ids
+        )
+        return self.state('list', args=addrs, check=check, no_color=no_color, state=state, **options)
+
+    def state_mv(
+            self,
+            src: str,
+            dst: str,
+            check: bool = False,
+            no_color: bool = True,
+            dry_run: bool = None,
+            lock: bool = None,
+            lock_timeout: str = None,
+            ignore_remote_version: bool = None,
+            **options,
+    ):
+        """Refer to https://www.terraform.io/docs/commands/state/mv
+
+        This command will move an item matched by the address given to the
+        destination address. This command can also move to a destination address
+        in a completely different state file.
+
+        This can be used for simple resource renaming, moving items to and from
+        a module, moving entire modules, and more. And because this command can also
+        move data to a completely new state, it can also be used for refactoring
+        one configuration into multiple separately managed Terraform configurations.
+
+        This command will output a backup copy of the state prior to saving any
+        changes. The backup cannot be disabled. Due to the destructive nature
+        of this command, backups are required.
+
+        If you're moving an item to a different state file, a backup will be created
+        for each state file.
+
+        :param src: Source address of resource.
+        :param dst: Destination address of resource.
+        :param check: Whether to check return code.
+        :param no_color: True to output not contain any color.
+        :param dry_run: True to print out what would've been moved but doesn't
+            actually move anything.
+        :param lock: False to not hold a state lock during backend migration.
+            This is dangerous if others might concurrently run commands against the
+            same workspace.
+        :param lock_timeout: Duration to retry a state lock.
+        :param ignore_remote_version: A rare option used for the remote backend only. See
+            the remote backend documentation for more information.
+        :param options: More command options.
+        """
+        options.update(
+            dry_run=flag(dry_run),
+            lock=lock,
+            lock_timeout=lock_timeout,
+            ignore_remote_version=flag(ignore_remote_version),
+        )
+        return self.state('mv', args=[src, dst], check=check, no_color=no_color, **options)
+
+    def state_pull(
+            self,
+            check: bool = False,
+            no_color: bool = True,
+            **options,
+    ):
+        """Refer to https://www.terraform.io/docs/commands/state/pull
+
+        Pull the state from its location, upgrade the local copy, and output it.
+        As part of this process, Terraform will upgrade the state format of the
+        local copy to the current version.
+
+        The primary use of this is for state stored remotely. This command
+        will still work with local state but is less useful for this.
+
+        :param check: Whether to check return code.
+        :param no_color: True to output not contain any color.
+        :param options: More command options.
+        """
+        options.update(
+            no_color=flag(no_color),
+        )
+        cmd = ['state', 'pull']
+        retcode, stdout, stderr = self.run(cmd, options=options, chdir=self.cwd, check=check)
+        json = retcode == 0
+        value = json_loads(stdout) if json else stdout
+        return CommandResult(retcode, value, stderr, json=json)
+
+    def state_push(
+            self,
+            path: str,
+            check: bool = False,
+            no_color: bool = True,
+            force: bool = None,
+            lock: bool = None,
+            lock_timeout: str = None,
+            **options,
+    ):
+        """Refer to https://www.terraform.io/docs/commands/state/push
+
+        Update remote state from a local state file at path.
+        The command will protect you against writing an older serial or a
+        different state file lineage unless you specify the"force" flag.
+
+        This command works with local state (it will overwrite the local
+        state), but is less useful for this use case.
+
+        If PATH is "-", then this command will read the state to push from stdin.
+        Data from stdin is not streamed to the backend: it is loaded completely
+        (until pipe close), verified, and then pushed.
+
+        :param path: The path of the local state file.
+        :param check: Whether to check return code.
+        :param force: True to write the state even if lineages don't match or the
+            remote serial is higher.
+        :param no_color: True to output not contain any color.
+        :param lock: False to not hold a state lock during backend migration.
+            This is dangerous if others might concurrently run commands against the
+            same workspace.
+        :param lock_timeout: Duration to retry a state lock.
+        :param options: More command options.
+        """
+        options.update(
+            force=flag(force),
+            lock=lock,
+            lock_timeout=lock_timeout,
+        )
+        return self.state('push', args=[path], check=check, no_color=no_color, **options)
+
+    def state_replace_provider(
+            self,
+            from_provider: str,
+            to_provider: str,
+            check: bool = False,
+            no_color: bool = True,
+            auto_approve: bool = True,
+            lock: bool = None,
+            lock_timeout: str = None,
+            ignore_remote_version: bool = None,
+            **options,
+    ):
+        """Refer to https://www.terraform.io/cli/commands/state/replace-provider
+
+        Replace provider for resources in the Terraform state.
+
+        :param from_provider: FROM_PROVIDER_FQN.
+        :param to_provider: TO_PROVIDER_FQN.
+        :param check: Whether to check return code.
+        :param no_color: True to output not contain any color.
+        :param auto_approve: Skip interactive approval.
+        :param lock: False to not hold a state lock during backend migration.
+            This is dangerous if others might concurrently run commands against the
+            same workspace.
+        :param lock_timeout: Duration to retry a state lock.
+        :param ignore_remote_version: A rare option used for the remote backend only. See
+            the remote backend documentation for more information.
+        :param options: More command options.
+        """
+        options.update(
+            lock=lock,
+            lock_timeout=lock_timeout,
+            auto_approve=flag(auto_approve),
+            ignore_remote_version=flag(ignore_remote_version),
+        )
+        return self.state('replace-provider', args=[from_provider, to_provider],
+                          check=check, no_color=no_color, **options)
+
+    def state_rm(
+            self,
+            *addrs,
+            check: bool = False,
+            no_color: bool = True,
+            dry_run: bool = None,
+            backup: str = None,
+            lock: bool = None,
+            lock_timeout: str = None,
+            state: str = None,
+            ignore_remote_version: bool = None,
+            **options,
+    ):
+        """Refer to https://www.terraform.io/cli/commands/state/rm
+
+        Remove one or more items from the Terraform state, causing Terraform to
+        "forget" those items without first destroying them in the remote system.
+
+        This command removes one or more resource instances from the Terraform state
+        based on the addresses given. You can view and list the available instances
+        with "terraform state list".
+
+        If you give the address of an entire module then all of the instances in
+        that module and any of its child modules will be removed from the state.
+
+        If you give the address of a resource that has "count" or "for_each" set,
+        all of the instances of that resource will be removed from the state.
+
+        :param addrs: The address list of resources.
+        :param check: Whether to check return code.
+        :param no_color: True to output not contain any color.
+        :param dry_run: Path where Terraform should write the backup state.
+        :param backup: True to print out what would've been moved but doesn't
+            actually move anything.
+        :param lock: False to not hold a state lock during backend migration.
+            This is dangerous if others might concurrently run commands against the
+            same workspace.
+        :param lock_timeout: Duration to retry a state lock.
+        :param state: Path to the state file to update. Defaults to the current
+            workspace state.
+        :param ignore_remote_version: Continue even if remote and local Terraform
+            versions are incompatible. This may result in an unusable workspace,
+            and should be used with extreme caution.
+        :param options: More command options.
+        """
+        options.update(
+            dry_run=flag(dry_run),
+            backup=backup,
+            lock=lock,
+            lock_timeout=lock_timeout,
+            state=state,
+            ignore_remote_version=flag(ignore_remote_version),
+        )
+        return self.state('rm', args=addrs, check=check, no_color=no_color, **options)
+
+    def state_show(
+            self,
+            addr: str,
+            check: bool = False,
+            no_color: bool = True,
+            state: str = None,
+            **options,
+    ):
+        """Refer to https://www.terraform.io/cli/commands/state/show
+
+        Shows the attributes of a resource in the Terraform state.
+
+        This command shows the attributes of a single resource in the Terraform
+        state. The address argument must be used to specify a single resource.
+        You can view the list of available resources with "terraform state list".
+
+        :param addr: The address of resource.
+        :param check: Whether to check return code.
+        :param no_color: True to output not contain any color.
+        :param state: Path to the state file to update. Defaults to the current
+            workspace state.
+        :param options: More command options.
+        """
+        options.update(
+            state=state,
+        )
+        return self.state('show', args=[addr], check=check, no_color=no_color, **options)

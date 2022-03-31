@@ -10,10 +10,12 @@ import (
 	"github.com/hashicorp/terraform/internal/command/format"
 	"github.com/hashicorp/terraform/internal/didyoumean"
 	"github.com/hashicorp/terraform/internal/httpclient"
+	"github.com/hashicorp/terraform/internal/logging"
 	"github.com/hashicorp/terraform/internal/terminal"
 	"github.com/hashicorp/terraform/version"
 	"github.com/mitchellh/cli"
 	"github.com/mitchellh/colorstring"
+	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -35,6 +37,10 @@ import "C"
 
 //export RunCli
 func RunCli(cArgc C.int, cArgv **C.char, cStdOutFd C.int, cStdErrFd C.int) C.int {
+	defer logging.PanicHandler()
+
+	var err error
+
 	// Convert C variables to Go variables
 	os.Args = os.Args[:0]
 	os.Args = append(os.Args, "Terraform")
@@ -66,12 +72,44 @@ func RunCli(cArgc C.int, cArgv **C.char, cStdOutFd C.int, cStdErrFd C.int) C.int
 		runtime.GC()
 	}()
 
-	var err error
+	tmpLogPath := os.Getenv(envTmpLogPath)
+	if tmpLogPath != "" {
+		f, err := os.OpenFile(tmpLogPath, os.O_RDWR|os.O_APPEND, 0666)
+		if err == nil {
+			defer f.Close()
+
+			log.Printf("[DEBUG] Adding temp file log sink: %s", f.Name())
+			logging.RegisterSink(f)
+		} else {
+			log.Printf("[ERROR] Could not open temp log file: %v", err)
+		}
+	}
+
+	log.Printf(
+		"[INFO] Terraform version: %s %s",
+		Version, VersionPrerelease)
+	log.Printf("[INFO] Go runtime version: %s", runtime.Version())
+	log.Printf("[INFO] CLI args: %#v", os.Args)
 
 	streams, err := terminal.Init()
 	if err != nil {
 		Ui.Error(fmt.Sprintf("Failed to configure the terminal: %s", err))
 		return 1
+	}
+	if streams.Stdout.IsTerminal() {
+		log.Printf("[TRACE] Stdout is a terminal of width %d", streams.Stdout.Columns())
+	} else {
+		log.Printf("[TRACE] Stdout is not a terminal")
+	}
+	if streams.Stderr.IsTerminal() {
+		log.Printf("[TRACE] Stderr is a terminal of width %d", streams.Stderr.Columns())
+	} else {
+		log.Printf("[TRACE] Stderr is not a terminal")
+	}
+	if streams.Stdin.IsTerminal() {
+		log.Printf("[TRACE] Stdin is a terminal")
+	} else {
+		log.Printf("[TRACE] Stdin is not a terminal")
 	}
 
 	// NOTE: We're intentionally calling LoadConfig _before_ handling a possible
@@ -115,7 +153,9 @@ func RunCli(cArgc C.int, cArgv **C.char, cStdOutFd C.int, cStdErrFd C.int) C.int
 	} else {
 		// Most commands don't actually need credentials, and most situations
 		// that would get us here would already have been reported by the config
-		// loading above.
+		// loading above, so we'll just log this one as an aid to debugging
+		// in the unlikely event that it _does_ arise.
+		log.Printf("[WARN] Cannot initialize remote host credentials manager: %s", err)
 		// passing (untyped) nil as the creds source is okay because the disco
 		// object checks that and just acts as though no credentials are present.
 		services = disco.NewWithCredentialsSource(nil)
@@ -179,14 +219,10 @@ func RunCli(cArgc C.int, cArgv **C.char, cStdOutFd C.int, cStdErrFd C.int) C.int
 		}
 	}
 
-	//// In tests, Commands may already be set to provide mock commands
-	//if Commands == nil {
-	//	// Commands get to hold on to the original working directory here,
-	//	// in case they need to refer back to it for any special reason, though
-	//	// they should primarily be working with the override working directory
-	//	// that we've now switched to above.
-	//	initCommands(originalWd, streams, config, services, providerSrc, providerDevOverrides, unmanagedProviders)
-	//}
+	// Commands get to hold on to the original working directory here,
+	// in case they need to refer back to it for any special reason, though
+	// they should primarily be working with the override working directory
+	// that we've now switched to above.
 	initCommands(originalWd, streams, config, services, providerSrc, providerDevOverrides, unmanagedProviders)
 
 	// Run checkpoint
@@ -232,6 +268,7 @@ func RunCli(cArgc C.int, cArgv **C.char, cStdOutFd C.int, cStdErrFd C.int) C.int
 	}
 
 	// Rebuild the CLI with any modified args.
+	log.Printf("[INFO] CLI command args: %#v", args)
 	cliRunner = &cli.CLI{
 		Name:       binName,
 		Args:       args,
@@ -279,6 +316,14 @@ func RunCli(cArgc C.int, cArgv **C.char, cStdOutFd C.int, cStdErrFd C.int) C.int
 	if err != nil {
 		Ui.Error(fmt.Sprintf("Error executing CLI: %s", err.Error()))
 		return 1
+	}
+
+	// if we are exiting with a non-zero code, check if it was caused by any
+	// plugins crashing
+	if exitCode != 0 {
+		for _, panicLog := range logging.PluginPanics() {
+			Ui.Error(panicLog)
+		}
 	}
 	return C.int(exitCode)
 }
