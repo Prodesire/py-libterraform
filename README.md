@@ -10,16 +10,6 @@ Python binding for [Terraform](https://www.terraform.io/).
 $ pip install libterraform
 ```
 
-## Building & Testing
-
-If you want to develop this library, show know how to build and then run tests:
-
-```bash
-$ pip install poetry
-$ poetry build -f wheel
-$ pytest
-```
-
 ## Usage
 
 ### Terraform CLI
@@ -89,8 +79,26 @@ respectively.
 dict_keys(['time_sleep.wait1', 'time_sleep.wait2'])
 ```
 
+## Building & Testing
 
-## Why use this libray?
+If you want to develop this library, should first prepare the following environments:
+- [GoLang](https://go.dev/dl/) (Version 1.17.x or 1.16.x)
+- [Python](https://www.python.org/downloads/) (Version 3.6~3.10)
+- GCC
+
+Then, `pip install` necessary tools:
+```bash
+$ pip install poetry pytest
+```
+
+Now, we can build and test:
+```bash
+$ poetry build -f wheel
+$ pytest
+```
+
+
+## Why use this library?
 Terraform is a great tool for deploying resources. If you need to call the Terraform command in the Python program
 for deployment, a new process needs to be created to execute the Terraform command on the system. A typical example 
 of this is the [python-terraform](https://github.com/beelit94/python-terraform) library. 
