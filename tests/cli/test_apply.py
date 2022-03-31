@@ -6,7 +6,7 @@ from libterraform import TerraformCommand
 class TestTerraformCommandApply:
     def test_apply(self, cli: TerraformCommand):
         r = cli.apply()
-        assert r.retcode == 0
+        assert r.retcode == 0, r.error
         assert isinstance(r.value, list)
 
     def test_plan_and_apply(self, cli: TerraformCommand):
@@ -17,5 +17,5 @@ class TestTerraformCommandApply:
         tfplan_path = 'sleep.tfplan'
         cli.plan(out=tfplan_path)
         r = cli.apply(tfplan_path)
-        assert r.retcode == 0
+        assert r.retcode == 0, r.error
         assert isinstance(r.value, list)

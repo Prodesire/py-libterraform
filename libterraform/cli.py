@@ -1,11 +1,11 @@
 import os
 from ctypes import *
-from typing import List
 from threading import Thread
+from typing import List
 
 from libterraform import _lib_tf
-from libterraform.exceptions import TerraformCommandError, TerraformFdReadError
 from libterraform.common import json_loads, WINDOWS
+from libterraform.exceptions import TerraformCommandError, TerraformFdReadError
 
 _run_cli = _lib_tf.RunCli
 _run_cli.argtypes = [c_int64, POINTER(c_char_p), c_int64, c_int64]
@@ -38,7 +38,15 @@ class TerraformCommand:
         self.cwd = cwd
 
     @classmethod
-    def run(cls, cmd, args: List[str] = None, options: dict = None, chdir=None, check=False, json=False) -> (int, str, str):
+    def run(
+            cls,
+            cmd: str,
+            args: List[str] = None,
+            options: dict = None,
+            chdir=None,
+            check: bool = False,
+            json=False
+    ) -> (int, str, str):
         """
         Run command with args and return a tuple (retcode, stdout, stderr).
 
@@ -135,7 +143,7 @@ class TerraformCommand:
             stdout_buffer.append(stdout)
             stderr_buffer.append(stderr)
 
-    def version(self, check=False, json=True, **options) -> CommandResult:
+    def version(self, check: bool = False, json: bool = True, **options) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/version
 
         Displays the version of Terraform and all installed plugins.
@@ -152,7 +160,7 @@ class TerraformCommand:
 
     def init(
             self,
-            check=False,
+            check: bool = False,
             backend: bool = None,
             backend_config: str = None,
             force_copy: bool = None,
@@ -188,7 +196,7 @@ class TerraformCommand:
         By default, this assumes you want to get json output.
 
         :param check: Whether to check return code.
-        :param backend: False for disable backend or Terraform Cloud initialization
+        :param backend: False to disable backend or Terraform Cloud initialization
             for this configuration and use what was previously initialized instead.
         :param backend_config: Configuration to be merged with what is in the
             configuration file's 'backend' block. This can be either a path to an
@@ -200,14 +208,14 @@ class TerraformCommand:
             confirmation prompts.
         :param from_module: Copy the contents of the given module into the target
             directory before initialization.
-        :param get: False for disable downloading modules for this configuration.
-        :param input: False for disable interactive prompts. Note that some actions may
+        :param get: False to disable downloading modules for this configuration.
+        :param input: False to disable interactive prompts. Note that some actions may
             require interactive prompts and will error if input is disabled.
-        :param lock: False for not hold a state lock during backend migration.
+        :param lock: False to not hold a state lock during backend migration.
             This is dangerous if others might concurrently run commands against the
             same workspace.
         :param lock_timeout: Duration to retry a state lock.
-        :param no_color: True for output not contain any color.
+        :param no_color: True to output not contain any color.
         :param plugin_dirs: Directories containing plugin binaries. This overrides all
             default search paths for plugins, and prevents the automatic installation
             of plugins.
@@ -225,6 +233,7 @@ class TerraformCommand:
             proceed even when there is a potential mismatch.
             See the documentation on configuring Terraform with Terraform Cloud for more
             information.
+        :param options: More command options.
         """
         options.update(
             backend=backend,
@@ -248,8 +257,8 @@ class TerraformCommand:
 
     def validate(
             self,
-            check=False,
-            json=True,
+            check: bool = False,
+            json: bool = True,
             no_color: bool = True,
             **options,
     ) -> CommandResult:
@@ -281,7 +290,8 @@ class TerraformCommand:
 
         :param check: Whether to check return code.
         :param json: Whether to load stdout as json.
-        :param no_color: True for output not contain any color.
+        :param no_color: True to output not contain any color.
+        :param options: More command options.
         """
         options.update(
             no_color=flag(no_color),
@@ -292,8 +302,8 @@ class TerraformCommand:
 
     def plan(
             self,
-            check=False,
-            json=True,
+            check: bool = False,
+            json: bool = True,
             destroy: bool = None,
             refresh_only: bool = None,
             refresh: bool = None,
@@ -354,18 +364,19 @@ class TerraformCommand:
             0 - Succeeded, diff is empty (no changes)
             1 - Errored
             2 - Succeeded, there is a diff
-        :param input: False for disable interactive prompts. Note that some actions may
+        :param input: False to disable interactive prompts. Note that some actions may
             require interactive prompts and will error if input is disabled.
-        :param lock: False for not hold a state lock during backend migration.
+        :param lock: False to not hold a state lock during backend migration.
             This is dangerous if others might concurrently run commands against the
             same workspace.
         :param lock_timeout: Duration to retry a state lock.
-        :param no_color: True for output not contain any color.
+        :param no_color: True to output not contain any color.
         :param out: Write a plan file to the given path. This can be used as
             input to the show or apply command.
         :param parallelism: Limit the number of concurrent operations. Defaults to 10.
         :param state: A legacy option used for the local backend only. See the
             local backend's documentation for more information.
+        :param options: More command options.
         """
         options.update(
             destroy=flag(destroy),
@@ -392,8 +403,8 @@ class TerraformCommand:
     def show(
             self,
             path: str = None,
-            check=False,
-            json=True,
+            check: bool = False,
+            json: bool = True,
             no_color: bool = True,
             **options,
     ) -> CommandResult:
@@ -407,7 +418,8 @@ class TerraformCommand:
         :param path: Terraform state or plan file path.
         :param check: Whether to check return code.
         :param json: Whether to load stdout as json.
-        :param no_color: True for output not contain any color.
+        :param no_color: True to output not contain any color.
+        :param options: More command options.
         """
         options.update(
             no_color=flag(no_color),
@@ -420,8 +432,8 @@ class TerraformCommand:
     def apply(
             self,
             plan: str = None,
-            check=False,
-            json=True,
+            check: bool = False,
+            json: bool = True,
             auto_approve: bool = True,
             backup: str = None,
             compact_warnings: bool = None,
@@ -461,13 +473,13 @@ class TerraformCommand:
         :param compact_warnings: If Terraform produces any warnings that are not
             accompanied by errors, shows them in a more compact form that includes
             only the summary messages.
-        :param input: False for disable interactive prompts. Note that some actions may
+        :param input: False to disable interactive prompts. Note that some actions may
             require interactive prompts and will error if input is disabled.
-        :param lock: False for not hold a state lock during backend migration.
+        :param lock: False to not hold a state lock during backend migration.
             This is dangerous if others might concurrently run commands against the
             same workspace.
         :param lock_timeout: Duration to retry a state lock.
-        :param no_color: True for output not contain any color.
+        :param no_color: True to output not contain any color.
         :param parallelism: Limit the number of concurrent operations. Defaults to 10.
         :param state: Path to read and save state (unless `state_out` is specified).
             Defaults to "terraform.tfstate".
@@ -476,6 +488,7 @@ class TerraformCommand:
         :param destroy: Select the "destroy" planning mode, which creates a plan
             to destroy all objects currently managed by this Terraform configuration
             instead of the usual behavior.
+        :param options: More command options.
         """
         options.update(
             auto_approve=flag(auto_approve),
@@ -497,8 +510,8 @@ class TerraformCommand:
 
     def destroy(
             self,
-            check=False,
-            json=True,
+            check: bool = False,
+            json: bool = True,
             auto_approve: bool = True,
             backup: str = None,
             compact_warnings: bool = None,
@@ -533,18 +546,19 @@ class TerraformCommand:
         :param compact_warnings: If Terraform produces any warnings that are not
             accompanied by errors, shows them in a more compact form that includes
             only the summary messages.
-        :param input: False for disable interactive prompts. Note that some actions may
+        :param input: False to disable interactive prompts. Note that some actions may
             require interactive prompts and will error if input is disabled.
-        :param lock: False for not hold a state lock during backend migration.
+        :param lock: False to not hold a state lock during backend migration.
             This is dangerous if others might concurrently run commands against the
             same workspace.
         :param lock_timeout: Duration to retry a state lock.
-        :param no_color: True for output not contain any color.
+        :param no_color: True to output not contain any color.
         :param parallelism: Limit the number of concurrent operations. Defaults to 10.
         :param state: Path to read and save state (unless `state_out` is specified).
             Defaults to "terraform.tfstate".
         :param state_out: Path to write state to that is different than `state`.
             This can be used to preserve the old state.
+        :param options: More command options.
         """
         options.update(
             auto_approve=flag(auto_approve),
@@ -561,3 +575,197 @@ class TerraformCommand:
         retcode, stdout, stderr = self.run('destroy', options=options, chdir=self.cwd, check=check, json=json)
         value = json_loads(stdout, split=True) if json else stdout
         return CommandResult(retcode, value, stderr, json=json)
+
+    def fmt(
+            self,
+            dir: str = None,
+            check: bool = False,
+            no_color: bool = True,
+            list: bool = None,
+            write: bool = None,
+            diff: bool = None,
+            check_input: bool = None,
+            recursive: bool = None,
+            **options,
+    ) -> CommandResult:
+        """Refer to https://www.terraform.io/docs/commands/fmt
+
+        Rewrites all Terraform configuration files to a canonical format. Both
+        configuration files (.tf) and variables files (.tfvars) are updated.
+        JSON files (.tf.json or .tfvars.json) are not modified.
+
+        If DIR is not specified then the current working directory will be used.
+        If DIR is "-" then content will be read from STDIN. The given content must
+        be in the Terraform language native syntax; JSON is not supported.
+
+        :param dir: Directory which Terraform configuration files located.
+        :param check: Whether to check return code.
+        :param no_color: True to output not contain any color.
+        :param list: False to not list files whose formatting differs
+            (always disabled if using STDIN)
+        :param write: False to not write to source files
+            (always disabled if using STDIN or checkout_input=True)
+        :param diff: Display diffs of formatting changes
+        :param check_input: Check if the input is formatted.
+            Exit status will be 0 if all input is properly formatted and non-zero otherwise.
+        :param recursive: Also process files in subdirectories. By default, only the
+            given directory (or current directory) is processed.
+        :param options: More command options.
+        """
+        options.update(
+            no_color=flag(no_color),
+            list=list,
+            write=write,
+            diff=flag(diff),
+            check=flag(check_input),
+            recursive=flag(recursive),
+        )
+        args = [dir] if dir else None
+        retcode, stdout, stderr = self.run('fmt', args, options=options, chdir=self.cwd, check=check)
+        return CommandResult(retcode, stdout, stderr, json=False)
+
+    def force_unlock(
+            self,
+            lock_id: str,
+            check: bool = False,
+            no_color: bool = True,
+            force: bool = True,
+            **options,
+    ) -> CommandResult:
+        """Refer to https://www.terraform.io/docs/commands/force-unlock
+
+        Manually unlock the state for the defined configuration.
+
+        This will not modify your infrastructure. This command removes the lock on the
+        state for the current workspace. The behavior of this lock is dependent
+        on the backend being used. Local state files cannot be unlocked by another
+        process.
+
+        :param lock_id: Lock ID.
+        :param check: Whether to check return code.
+        :param no_color: True to output not contain any color.
+        :param force: True to not ask for input for unlock confirmation.
+        :param options: More command options.
+        """
+        options.update(
+            no_color=flag(no_color),
+            force=flag(force),
+        )
+        args = [lock_id]
+        retcode, stdout, stderr = self.run('force-unlock', args, options=options, chdir=self.cwd, check=check)
+        return CommandResult(retcode, stdout, stderr, json=False)
+
+    def graph(
+            self,
+            check: bool = False,
+            no_color: bool = True,
+            plan: str = None,
+            draw_cycles: bool = None,
+            type: str = None,
+            **options,
+    ) -> CommandResult:
+        """Refer to https://www.terraform.io/docs/commands/graph
+
+        Produces a representation of the dependency graph between different
+        objects in the current configuration and state.
+
+        The graph is presented in the DOT language. The typical program that can
+        read this format is GraphViz, but many web services are also available
+        to read this format.
+
+        :param check: Whether to check return code.
+        :param no_color: True to output not contain any color.
+        :param plan: Render graph using the specified plan file instead of the
+            configuration in the current directory.
+        :param draw_cycles: True to highlight any cycles in the graph with colored edges.
+            This helps when diagnosing cycle errors.
+        :param type: Type of graph to output. Can be: plan, plan-refresh-only, plan-destroy, or apply.
+            By default, Terraform chooses "plan", or "apply" if you also set the plan=xxx option.
+        :param options: More command options.
+        """
+        options.update(
+            no_color=flag(no_color),
+            plan=plan,
+            draw_cycles=flag(draw_cycles),
+            type=type,
+        )
+        retcode, stdout, stderr = self.run('graph', options=options, chdir=self.cwd, check=check)
+        return CommandResult(retcode, stdout, stderr, json=False)
+
+    def import_resource(
+            self,
+            addr: str,
+            id: str,
+            check: bool = False,
+            config: str = None,
+            allow_missing_config: bool = None,
+            input: bool = False,
+            lock: bool = None,
+            lock_timeout: str = None,
+            no_color: bool = True,
+            vars: dict = None,
+            var_files: List[str] = None,
+            ignore_remote_version: bool = None,
+            **options,
+    ) -> CommandResult:
+        """Refer to https://www.terraform.io/docs/commands/import
+
+        Import existing infrastructure into your Terraform state.
+
+        This will find and import the specified resource into your Terraform
+        state, allowing existing infrastructure to come under Terraform
+        management without having to be initially created by Terraform.
+
+        The current implementation of Terraform import can only import resources
+        into the state. It does not generate configuration. A future version of
+        Terraform will also generate configuration.
+
+        Because of this, prior to running terraform import it is necessary to write
+        a resource configuration block for the resource manually, to which the
+        imported object will be attached.
+
+        This command will not modify your infrastructure, but it will make
+        network requests to inspect parts of your infrastructure relevant to
+        the resource being imported.
+
+        :param addr: The address to import the resource to.
+            Please see the documentation online for resource addresses.
+        :param id: The id is a resource-specific ID to identify that resource being imported.
+            Please reference the documentation for the resource type you're importing to
+            determine the ID syntax to use. It typically matches directly to the ID
+            that the provider uses.
+        :param check: Whether to check return code.
+        :param config: Path to a directory of Terraform configuration files
+          to use to configure the provider. Defaults to pwd.
+          If no config files are present, they must be provided
+          via the input prompts or env vars.
+        :param allow_missing_config: True to allow import when no resource configuration block exists.
+        :param input: False to disable interactive prompts. Note that some actions may
+            require interactive prompts and will error if input is disabled.
+        :param lock: False to not hold a state lock during backend migration.
+            This is dangerous if others might concurrently run commands against the
+            same workspace.
+        :param lock_timeout: Duration to retry a state lock.
+        :param no_color: True to output not contain any color.
+        :param vars: Set variables in the Terraform configuration.
+            This is only useful with the "config" option.
+        :param var_files: Load variable values from the given files, in addition to
+            the default files terraform.tfvars and *.auto.tfvars.
+        :param ignore_remote_version: A rare option used for the remote backend only.
+            See the remote backend documentation for more information.
+        :param options: More command options.
+        """
+        options.update(
+            config=config,
+            allow_missing_config=flag(allow_missing_config),
+            input=input,
+            lock=lock,
+            lock_timeout=lock_timeout,
+            no_color=flag(no_color),
+            var=vars,
+            var_file=var_files,
+            ignore_remote_version=flag(ignore_remote_version),
+        )
+        args = [addr, id]
+        retcode, stdout, stderr = self.run('import', args, options=options, chdir=self.cwd, check=check)
+        return CommandResult(retcode, stdout, stderr, json=False)

@@ -4,7 +4,7 @@ from libterraform import TerraformCommand
 class TestTerraformCommandShow:
     def test_show(self, cli: TerraformCommand):
         r = cli.show()
-        assert r.retcode == 0
+        assert r.retcode == 0, r.error
         assert 'format_version' in r.value
 
     def test_plan_and_show(self, cli: TerraformCommand):
