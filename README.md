@@ -1,5 +1,8 @@
 # Python libterraform
 
+[![libterraform](https://img.shields.io/pypi/v/libterraform.svg)](https://pypi.python.org/pypi/libterraform)
+[![libterraform](https://img.shields.io/pypi/l/libterraform.svg)](https://pypi.python.org/pypi/libterraform)
+[![libterraform](https://img.shields.io/pypi/pyversions/libterraform.svg)](https://pypi.python.org/pypi/libterraform)
 [![Release](https://github.com/Prodesire/py-libterraform/actions/workflows/release.yml/badge.svg)](https://github.com/Prodesire/py-libterraform/actions/workflows/release.yml)
 
 Python binding for [Terraform](https://www.terraform.io/).

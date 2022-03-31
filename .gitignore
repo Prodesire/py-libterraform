@@ -21,6 +21,7 @@ vendor/
 *.iml
 *.so
 *.dll
+*.h
 t.*
 
 dist
