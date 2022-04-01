@@ -89,7 +89,14 @@ If you want to develop this library, should first prepare the following environm
 - [Python](https://www.python.org/downloads/) (Version 3.6~3.10)
 - GCC
 
-Then, `pip install` necessary tools:
+Then, initialize git submodule:
+```bash
+$ git submodule init
+$ git submodule update
+```
+
+`pip install` necessary tools:
+
 ```bash
 $ pip install poetry pytest
 ```
