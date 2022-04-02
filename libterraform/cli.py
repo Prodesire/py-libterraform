@@ -140,10 +140,11 @@ class TerraformCommand:
 
     @staticmethod
     def _fdread(stdout_fd, stderr_fd, stdout_buffer, stderr_buffer):
-        with os.fdopen(stdout_fd) as stdout_f, os.fdopen(stderr_fd) as stderr_f:
+        with os.fdopen(stdout_fd, encoding='utf-8') as stdout_f, \
+                os.fdopen(stderr_fd, encoding='utf-8') as stderr_f:
             stdout = stdout_f.read()
-            stderr = stderr_f.read()
             stdout_buffer.append(stdout)
+            stderr = stderr_f.read()
             stderr_buffer.append(stderr)
 
     def version(self, check: bool = False, json: bool = True, **options) -> CommandResult:
