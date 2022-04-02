@@ -1334,3 +1334,321 @@ class TerraformCommand:
             state=state,
         )
         return self.state('show', args=[addr], check=check, no_color=no_color, **options)
+
+    def taint(
+            self,
+            addr: str,
+            check: bool = False,
+            no_color: bool = True,
+            allow_missing_config: bool = None,
+            lock: bool = None,
+            lock_timeout: str = None,
+            ignore_remote_version: bool = None,
+            **options,
+    ):
+        """Refer to https://www.terraform.io/cli/commands/taint
+
+        Terraform uses the term "tainted" to describe a resource instance
+        which may not be fully functional, either because its creation
+        partially failed or because you've manually marked it as such using
+        this command.
+
+        This will not modify your infrastructure directly, but subsequent
+        Terraform plans will include actions to destroy the remote object
+        and create a new object to replace it.
+
+        You can remove the "taint" state from a resource instance using
+        the "terraform untaint" command.
+
+        The address is in the usual resource address syntax, such as:
+            aws_instance.foo
+            aws_instance.bar[1]
+            module.foo.module.bar.aws_instance.baz
+
+        Use your shell's quoting or escaping syntax to ensure that the
+        address will reach Terraform correctly, without any special
+        interpretation.
+
+        :param addr: The address of resource.
+        :param check: Whether to check return code.
+        :param no_color: True to output not contain any color.
+        :param allow_missing_config: True to regard the command will succeed (exit code 0)
+            even if the resource is missing.
+        :param lock: False to not hold a state lock during backend migration.
+            This is dangerous if others might concurrently run commands against the
+            same workspace.
+        :param lock_timeout: Duration to retry a state lock.
+        :param ignore_remote_version: A rare option used for the remote backend only. See
+            the remote backend documentation for more information.
+        :param options: More command options.
+        """
+        options.update(
+            no_color=flag(no_color),
+            allow_missing_config=flag(allow_missing_config),
+            lock=lock,
+            lock_timeout=lock_timeout,
+            ignore_remote_version=flag(ignore_remote_version),
+        )
+        retcode, stdout, stderr = self.run('taint', args=[addr], options=options, chdir=self.cwd, check=check)
+        return CommandResult(retcode, stdout, stderr)
+
+    def untaint(
+            self,
+            addr: str,
+            check: bool = False,
+            no_color: bool = True,
+            allow_missing_config: bool = None,
+            lock: bool = None,
+            lock_timeout: str = None,
+            ignore_remote_version: bool = None,
+            **options,
+    ):
+        """Refer to https://www.terraform.io/cli/commands/untaint
+
+        Terraform uses the term "tainted" to describe a resource instance
+        which may not be fully functional, either because its creation
+        partially failed or because you've manually marked it as such using
+        the "terraform taint" command.
+
+        This command removes that state from a resource instance, causing
+        Terraform to see it as fully-functional and not in need of
+        replacement.
+
+        This will not modify your infrastructure directly. It only avoids
+        Terraform planning to replace a tainted instance in a future operation.
+
+        :param addr: The address of resource.
+        :param check: Whether to check return code.
+        :param no_color: True to output not contain any color.
+        :param allow_missing_config: True to regard the command will succeed (exit code 0)
+            even if the resource is missing.
+        :param lock: False to not hold a state lock during backend migration.
+            This is dangerous if others might concurrently run commands against the
+            same workspace.
+        :param lock_timeout: Duration to retry a state lock.
+        :param ignore_remote_version: A rare option used for the remote backend only. See
+            the remote backend documentation for more information.
+        :param options: More command options.
+        """
+        options.update(
+            no_color=flag(no_color),
+            allow_missing_config=flag(allow_missing_config),
+            lock=lock,
+            lock_timeout=lock_timeout,
+            ignore_remote_version=flag(ignore_remote_version),
+        )
+        retcode, stdout, stderr = self.run('untaint', args=[addr], options=options, chdir=self.cwd, check=check)
+        return CommandResult(retcode, stdout, stderr)
+
+    def test(
+            self,
+            check: bool = False,
+            no_color: bool = True,
+            compact_warnings: bool = None,
+            junit_xml: str = None,
+            **options,
+    ):
+        """Refer to https://www.terraform.io/cli/commands/test
+
+        This is an experimental command to help with automated integration
+        testing of shared modules. The usage and behavior of this command is
+        likely to change in breaking ways in subsequent releases, as we
+        are currently using this command primarily for research purposes.
+
+        In its current experimental form, "test" will look under the current
+        working directory for a subdirectory called "tests", and then within
+        that directory search for one or more subdirectories that contain
+        ".tf" or ".tf.json" files. For any that it finds, it will perform
+        Terraform operations similar to the following sequence of commands
+        in each of those directories:
+          terraform validate
+          terraform apply
+          terraform destroy
+
+        The test configurations should not declare any input variables and
+        should at least contain a call to the module being tested, which
+        will always be available at the path ../.. due to the expected
+        filesystem layout.
+
+        The tests are considered to be successful if all of the above steps
+        succeed.
+
+        Test configurations may optionally include uses of the special
+        built-in test provider terraform.io/builtin/test, which allows
+        writing explicit test assertions which must also all pass in order
+        for the test run to be considered successful.
+
+        This initial implementation is intended as a minimally-viable
+        product to use for further research and experimentation, and in
+        particular it currently lacks the following capabilities that we
+        expect to consider in later iterations, based on feedback:
+            - Testing of subsequent updates to existing infrastructure,
+              where currently it only supports initial creation and
+              then destruction.
+            - Testing top-level modules that are intended to be used for
+              "real" environments, which typically have hard-coded values
+              that don't permit creating a separate "copy" for testing.
+            - Some sort of support for unit test runs that don't interact
+              with remote systems at all, e.g. for use in checking pull
+              requests from untrusted contributors.
+
+        In the meantime, we'd like to hear feedback from module authors
+        who have tried writing some experimental tests for their modules
+        about what sorts of tests you were able to write, what sorts of
+        tests you weren't able to write, and any tests that you were
+        able to write but that were difficult to model in some way.
+
+        :param check: Whether to check return code.
+        :param no_color: True to output not contain any color.
+        :param compact_warnings: Use a more compact representation for warnings, if
+             this command produces only warnings and no errors.
+        :param junit_xml: In addition to the usual output, also write test
+            results to the given file path in JUnit XML format.
+            This format is commonly supported by CI systems, and they typically
+            expect to be given a filename to search for in the test workspace
+            after the test run finishes.
+        :param options: More command options.
+        """
+        options.update(
+            no_color=flag(no_color),
+            compact_warnings=flag(compact_warnings),
+            junit_xml=junit_xml,
+        )
+        retcode, stdout, stderr = self.run('test', options=options, chdir=self.cwd, check=check)
+        return CommandResult(retcode, stdout, stderr)
+
+    def workspace(
+            self,
+            subcmd: str,
+            args: Sequence[str] = None,
+            check: bool = False,
+            no_color: bool = True,
+            **options,
+    ) -> CommandResult:
+        """Refer to https://www.terraform.io/docs/commands/workspace
+
+        new, list, show, select and delete Terraform workspaces.
+
+        :param subcmd: Sub commands: list, mv, pull, push, replace-provider, rm and show.
+        :param args: Args for command.
+        :param check: Whether to check return code.
+        :param no_color: True to output not contain any color.
+        :param options: More command options.
+        """
+        options.update(
+            no_color=flag(no_color),
+        )
+        cmd = ['workspace', subcmd]
+        retcode, stdout, stderr = self.run(cmd, args=args, options=options, chdir=self.cwd, check=check)
+        return CommandResult(retcode, stdout, stderr)
+
+    def workspace_new(
+            self,
+            name: str,
+            check: bool = False,
+            no_color: bool = True,
+            lock: bool = None,
+            lock_timeout: str = None,
+            state: str = None,
+            **options,
+    ):
+        """Refer to https://www.terraform.io/docs/commands/workspace/new
+
+        Create a new Terraform workspace.
+
+        :param name: Workspace name.
+        :param check: Whether to check return code.
+        :param no_color: True to output not contain any color.
+        :param lock: False to not hold a state lock during backend migration.
+            This is dangerous if others might concurrently run commands against the
+            same workspace.
+        :param lock_timeout: Duration to retry a state lock.
+        :param state: Copy an existing state file into the new workspace.
+        :param options: More command options.
+        """
+        options.update(
+            lock=lock,
+            lock_timeout=lock_timeout,
+        )
+        return self.workspace('new', args=[name], check=check, no_color=no_color, state=state, **options)
+
+    def workspace_list(
+            self,
+            check: bool = False,
+            no_color: bool = True,
+            **options,
+    ):
+        """Refer to https://www.terraform.io/docs/commands/workspace/list
+
+        List Terraform workspaces.
+
+        :param check: Whether to check return code.
+        :param no_color: True to output not contain any color.
+        :param options: More command options.
+        """
+        return self.workspace('list', check=check, no_color=no_color, **options)
+
+    def workspace_show(
+            self,
+            check: bool = False,
+            no_color: bool = True,
+            **options,
+    ):
+        """Refer to https://www.terraform.io/docs/commands/workspace/show
+
+        Show the name of the current workspace.
+
+        :param check: Whether to check return code.
+        :param no_color: True to output not contain any color.
+        :param options: More command options.
+        """
+        return self.workspace('show', check=check, no_color=no_color, **options)
+
+    def workspace_select(
+            self,
+            name: str,
+            check: bool = False,
+            no_color: bool = True,
+            **options,
+    ):
+        """Refer to https://www.terraform.io/docs/commands/workspace/select
+
+        Select a different Terraform workspace.
+
+        :param name: Workspace name.
+        :param check: Whether to check return code.
+        :param no_color: True to output not contain any color.
+        :param options: More command options.
+        """
+        return self.workspace('select', args=[name], check=check, no_color=no_color, **options)
+
+    def workspace_delete(
+            self,
+            name: str,
+            check: bool = False,
+            no_color: bool = True,
+            force: bool = None,
+            lock: bool = None,
+            lock_timeout: str = None,
+            **options,
+    ):
+        """Refer to https://www.terraform.io/docs/commands/workspace/delete
+
+        Delete a Terraform workspace.
+
+        :param name: Workspace name.
+        :param check: Whether to check return code.
+        :param no_color: True to remove even a non-empty workspace.
+        :param force: True to output not contain any color.
+        :param lock: False to not hold a state lock during backend migration.
+            This is dangerous if others might concurrently run commands against the
+            same workspace.
+        :param lock_timeout: Duration to retry a state lock.
+        :param options: More command options.
+        """
+        options.update(
+            force=flag(force),
+            lock=lock,
+            lock_timeout=lock_timeout,
+        )
+        return self.workspace('delete', args=[name], check=check, no_color=no_color, **options)
