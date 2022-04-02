@@ -47,8 +47,7 @@ To `init` and `apply` according to Terraform configuration files in the specifie
 
 ```python
 >>> from libterraform import TerraformCommand
->>> from tests.consts import TF_SLEEP_DIR
->>> cli = TerraformCommand(TF_SLEEP_DIR)
+>>> cli = TerraformCommand('your_terraform_configuration_directory')
 >>> cli.init()
 <CommandResult retcode=0 json=False>
 >>> cli.apply()
@@ -77,8 +76,7 @@ respectively.
 
 ```python
 >>> from libterraform import TerraformConfig
->>> from tests.consts import TF_SLEEP_DIR
->>> mod, _ = TerraformConfig.load_config_dir(TF_SLEEP_DIR)
+>>> mod, _ = TerraformConfig.load_config_dir('your_terraform_configuration_directory')
 >>> mod['ManagedResources'].keys()
 dict_keys(['time_sleep.wait1', 'time_sleep.wait2'])
 ```
