@@ -20,8 +20,8 @@ $ pip install libterraform
 
 `TerraformCommand` is used to invoke various Terraform commands.
 
-Currently, supports `version` and all main commands (`init`, `validate`, `plan`, `show`, `apply` and `destroy`),
-returning a `CommandResult` object. The `CommandResult` object has the following properties:
+Now, support all commands (`plan`, `apply`, `destroy` etc.), and return a `CommandResult` object.
+The `CommandResult` object has the following properties:
 
 - `retcode` indicates the command return code. A value of 0 or 2 is normal, otherwise is abnormal.
 - `value` represents command output. If `json=True` is specified when executing the command, the output will be loaded
