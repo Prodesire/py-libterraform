@@ -114,9 +114,12 @@ class TerraformCommand:
 
         stdout_buffer = []
         stderr_buffer = []
-        t = Thread(target=cls._fdread, args=(r_stdout_fd, r_stderr_fd, stdout_buffer, stderr_buffer))
-        t.daemon = True
-        t.start()
+        stdout_thread = Thread(target=cls._fdread, args=(r_stdout_fd, stdout_buffer))
+        stdout_thread.daemon = True
+        stdout_thread.start()
+        stderr_thread = Thread(target=cls._fdread, args=(r_stderr_fd, stderr_buffer))
+        stderr_thread.daemon = True
+        stderr_thread.start()
 
         if WINDOWS:
             import msvcrt
@@ -126,7 +129,8 @@ class TerraformCommand:
         else:
             retcode = _run_cli(argc, c_argv, w_stdout_fd, w_stderr_fd)
 
-        t.join()
+        stdout_thread.join()
+        stderr_thread.join()
         if not stdout_buffer:
             raise TerraformFdReadError(fd=r_stdout_fd)
         if not stderr_buffer:
@@ -139,13 +143,10 @@ class TerraformCommand:
         return retcode, stdout, stderr
 
     @staticmethod
-    def _fdread(stdout_fd, stderr_fd, stdout_buffer, stderr_buffer):
-        with os.fdopen(stdout_fd, encoding='utf-8') as stdout_f, \
-                os.fdopen(stderr_fd, encoding='utf-8') as stderr_f:
-            stdout = stdout_f.read()
-            stdout_buffer.append(stdout)
-            stderr = stderr_f.read()
-            stderr_buffer.append(stderr)
+    def _fdread(std_fd, std_buffer):
+        with os.fdopen(std_fd, encoding='utf-8') as std_f:
+            std = std_f.read()
+            std_buffer.append(std)
 
     def version(self, check: bool = False, json: bool = True, **options) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/version
