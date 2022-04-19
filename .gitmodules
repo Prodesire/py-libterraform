@@ -2,3 +2,7 @@
 	path = terraform
 	url = https://github.com/hashicorp/terraform
 	shallow = true
+[submodule "go-plugin"]
+	path = go-plugin
+	url = https://github.com/hashicorp/go-plugin
+	shallow = true

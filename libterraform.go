@@ -4,11 +4,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/hashicorp/go-plugin"
+	svchost "github.com/hashicorp/terraform-svchost"
 	"github.com/hashicorp/terraform-svchost/disco"
+	"github.com/hashicorp/terraform/internal/addrs"
 	backendInit "github.com/hashicorp/terraform/internal/backend/init"
+	"github.com/hashicorp/terraform/internal/command"
 	"github.com/hashicorp/terraform/internal/command/cliconfig"
 	"github.com/hashicorp/terraform/internal/command/format"
+	"github.com/hashicorp/terraform/internal/command/views"
+	"github.com/hashicorp/terraform/internal/command/webbrowser"
+	"github.com/hashicorp/terraform/internal/configs"
 	"github.com/hashicorp/terraform/internal/didyoumean"
+	"github.com/hashicorp/terraform/internal/experiments"
+	"github.com/hashicorp/terraform/internal/getproviders"
 	"github.com/hashicorp/terraform/internal/httpclient"
 	"github.com/hashicorp/terraform/internal/logging"
 	"github.com/hashicorp/terraform/internal/terminal"
@@ -17,13 +25,11 @@ import (
 	"github.com/mitchellh/colorstring"
 	"log"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"unsafe"
-
-	"github.com/hashicorp/terraform/internal/configs"
-	"github.com/hashicorp/terraform/internal/experiments"
 )
 
 /*
@@ -34,6 +40,27 @@ import "C"
 // **********************************************
 // CLI
 // **********************************************
+
+var shutdownChs = make(map[chan struct{}]struct{})
+var logFile *os.File
+var origStdout = os.Stdout
+var origStderr = os.Stderr
+
+func init() {
+	signalCh := make(chan os.Signal, 4)
+	signal.Notify(signalCh, ignoreSignals...)
+	signal.Notify(signalCh, forwardSignals...)
+	go func() {
+		for {
+			<-signalCh
+			log.Printf("[INFO] Received signal, shutting down")
+			for shutdownCh := range shutdownChs {
+				shutdownCh <- struct{}{}
+			}
+			log.Printf("[INFO] Received signal, shut down success")
+		}
+	}()
+}
 
 //export RunCli
 func RunCli(cArgc C.int, cArgv **C.char, cStdOutFd C.int, cStdErrFd C.int) C.int {
@@ -52,8 +79,7 @@ func RunCli(cArgc C.int, cArgv **C.char, cStdOutFd C.int, cStdErrFd C.int) C.int
 	}
 
 	// Override stdout and stdin by given std fd
-	origStdout := os.Stdout
-	origStderr := os.Stderr
+
 	Stdout := os.NewFile(uintptr(cStdOutFd), "libterraform/pipe/stdout")
 	Stderr := os.NewFile(uintptr(cStdErrFd), "libterraform/pipe/stderr")
 	os.Stdout = Stdout
@@ -69,7 +95,9 @@ func RunCli(cArgc C.int, cArgv **C.char, cStdOutFd C.int, cStdErrFd C.int) C.int
 		os.Stderr = origStderr
 		Stdout.Close()
 		Stderr.Close()
-		runtime.GC()
+		if len(checkpointResult) > 0 {
+			<-checkpointResult
+		}
 	}()
 
 	tmpLogPath := os.Getenv(envTmpLogPath)
@@ -223,18 +251,28 @@ func RunCli(cArgc C.int, cArgv **C.char, cStdOutFd C.int, cStdErrFd C.int) C.int
 	// in case they need to refer back to it for any special reason, though
 	// they should primarily be working with the override working directory
 	// that we've now switched to above.
-	initCommands(originalWd, streams, config, services, providerSrc, providerDevOverrides, unmanagedProviders)
+
+	shutdownCh := make(chan struct{}, 2)
+	shutdownChs[shutdownCh] = struct{}{}
+	defer func() {
+		delete(shutdownChs, shutdownCh)
+		close(shutdownCh)
+	}()
+	meta := NewMeta(originalWd, streams, config, services, providerSrc, providerDevOverrides, unmanagedProviders, shutdownCh)
+	commands := NewCommands(meta)
 
 	// Run checkpoint
 	go runCheckpoint(config)
 
 	// Make sure we clean up any managed plugins at the end of this
-	defer plugin.CleanupClients()
+	defer func() {
+		plugin.CleanupAndRemoveClients()
+	}()
 
 	// Build the CLI so far, we do this so we can query the subcommand.
 	cliRunner := &cli.CLI{
 		Args:       args,
-		Commands:   Commands,
+		Commands:   commands,
 		HelpFunc:   helpFunc,
 		HelpWriter: os.Stdout,
 	}
@@ -272,7 +310,7 @@ func RunCli(cArgc C.int, cArgv **C.char, cStdOutFd C.int, cStdErrFd C.int) C.int
 	cliRunner = &cli.CLI{
 		Name:       binName,
 		Args:       args,
-		Commands:   Commands,
+		Commands:   commands,
 		HelpFunc:   helpFunc,
 		HelpWriter: os.Stdout,
 
@@ -298,9 +336,9 @@ func RunCli(cArgc C.int, cArgv **C.char, cStdOutFd C.int, cStdErrFd C.int) C.int
 		// for typos of top-level commands. For a subcommand typo, like
 		// "terraform state posh", cmd would be "state" here and thus would
 		// be considered to exist, and it would print out its own usage message.
-		if _, exists := Commands[cmd]; !exists {
-			suggestions := make([]string, 0, len(Commands))
-			for name := range Commands {
+		if _, exists := commands[cmd]; !exists {
+			suggestions := make([]string, 0, len(commands))
+			for name := range commands {
 				suggestions = append(suggestions, name)
 			}
 			suggestion := didyoumean.NameSuggestion(cmd, suggestions)
@@ -326,6 +364,372 @@ func RunCli(cArgc C.int, cArgv **C.char, cStdOutFd C.int, cStdErrFd C.int) C.int
 		}
 	}
 	return C.int(exitCode)
+}
+
+func NewMeta(
+	originalWorkingDir string,
+	streams *terminal.Streams,
+	config *cliconfig.Config,
+	services *disco.Disco,
+	providerSrc getproviders.Source,
+	providerDevOverrides map[addrs.Provider]getproviders.PackageLocalDir,
+	unmanagedProviders map[addrs.Provider]*plugin.ReattachConfig,
+	shutdownCh <-chan struct{},
+) command.Meta {
+	var inAutomation bool
+	if v := os.Getenv(runningInAutomationEnvName); v != "" {
+		inAutomation = true
+	}
+
+	for userHost, hostConfig := range config.Hosts {
+		host, err := svchost.ForComparison(userHost)
+		if err != nil {
+			// We expect the config was already validated by the time we get
+			// here, so we'll just ignore invalid hostnames.
+			continue
+		}
+		services.ForceHostServices(host, hostConfig.Services)
+	}
+
+	configDir, err := cliconfig.ConfigDir()
+	if err != nil {
+		configDir = "" // No config dir available (e.g. looking up a home directory failed)
+	}
+
+	wd := WorkingDir(originalWorkingDir, os.Getenv("TF_DATA_DIR"))
+
+	meta := command.Meta{
+		WorkingDir: wd,
+		Streams:    streams,
+		View:       views.NewView(streams).SetRunningInAutomation(inAutomation),
+
+		Color:            true,
+		GlobalPluginDirs: globalPluginDirs(),
+		Ui:               Ui,
+
+		Services:        services,
+		BrowserLauncher: webbrowser.NewNativeLauncher(),
+
+		RunningInAutomation: inAutomation,
+		CLIConfigDir:        configDir,
+		PluginCacheDir:      config.PluginCacheDir,
+
+		ShutdownCh: shutdownCh,
+
+		ProviderSource:       providerSrc,
+		ProviderDevOverrides: providerDevOverrides,
+		UnmanagedProviders:   unmanagedProviders,
+	}
+	return meta
+}
+
+func NewCommands(meta command.Meta) map[string]cli.CommandFactory {
+
+	// The command list is included in the terraform -help
+	// output, which is in turn included in the docs at
+	// website/docs/cli/commands/index.html.markdown; if you
+	// add, remove or reclassify commands then consider updating
+	// that to match.
+
+	commands := map[string]cli.CommandFactory{
+		"apply": func() (cli.Command, error) {
+			return &command.ApplyCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"console": func() (cli.Command, error) {
+			return &command.ConsoleCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"destroy": func() (cli.Command, error) {
+			return &command.ApplyCommand{
+				Meta:    meta,
+				Destroy: true,
+			}, nil
+		},
+
+		"env": func() (cli.Command, error) {
+			return &command.WorkspaceCommand{
+				Meta:       meta,
+				LegacyName: true,
+			}, nil
+		},
+
+		"env list": func() (cli.Command, error) {
+			return &command.WorkspaceListCommand{
+				Meta:       meta,
+				LegacyName: true,
+			}, nil
+		},
+
+		"env select": func() (cli.Command, error) {
+			return &command.WorkspaceSelectCommand{
+				Meta:       meta,
+				LegacyName: true,
+			}, nil
+		},
+
+		"env new": func() (cli.Command, error) {
+			return &command.WorkspaceNewCommand{
+				Meta:       meta,
+				LegacyName: true,
+			}, nil
+		},
+
+		"env delete": func() (cli.Command, error) {
+			return &command.WorkspaceDeleteCommand{
+				Meta:       meta,
+				LegacyName: true,
+			}, nil
+		},
+
+		"fmt": func() (cli.Command, error) {
+			return &command.FmtCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"get": func() (cli.Command, error) {
+			return &command.GetCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"graph": func() (cli.Command, error) {
+			return &command.GraphCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"import": func() (cli.Command, error) {
+			return &command.ImportCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"init": func() (cli.Command, error) {
+			return &command.InitCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"login": func() (cli.Command, error) {
+			return &command.LoginCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"logout": func() (cli.Command, error) {
+			return &command.LogoutCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"output": func() (cli.Command, error) {
+			return &command.OutputCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"plan": func() (cli.Command, error) {
+			return &command.PlanCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"providers": func() (cli.Command, error) {
+			return &command.ProvidersCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"providers lock": func() (cli.Command, error) {
+			return &command.ProvidersLockCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"providers mirror": func() (cli.Command, error) {
+			return &command.ProvidersMirrorCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"providers schema": func() (cli.Command, error) {
+			return &command.ProvidersSchemaCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"push": func() (cli.Command, error) {
+			return &command.PushCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"refresh": func() (cli.Command, error) {
+			return &command.RefreshCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"show": func() (cli.Command, error) {
+			return &command.ShowCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"taint": func() (cli.Command, error) {
+			return &command.TaintCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"test": func() (cli.Command, error) {
+			return &command.TestCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"validate": func() (cli.Command, error) {
+			return &command.ValidateCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"version": func() (cli.Command, error) {
+			return &command.VersionCommand{
+				Meta:              meta,
+				Version:           Version,
+				VersionPrerelease: VersionPrerelease,
+				Platform:          getproviders.CurrentPlatform,
+				CheckFunc:         commandVersionCheck,
+			}, nil
+		},
+
+		"untaint": func() (cli.Command, error) {
+			return &command.UntaintCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"workspace": func() (cli.Command, error) {
+			return &command.WorkspaceCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"workspace list": func() (cli.Command, error) {
+			return &command.WorkspaceListCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"workspace select": func() (cli.Command, error) {
+			return &command.WorkspaceSelectCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"workspace show": func() (cli.Command, error) {
+			return &command.WorkspaceShowCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"workspace new": func() (cli.Command, error) {
+			return &command.WorkspaceNewCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"workspace delete": func() (cli.Command, error) {
+			return &command.WorkspaceDeleteCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		//-----------------------------------------------------------
+		// Plumbing
+		//-----------------------------------------------------------
+
+		"force-unlock": func() (cli.Command, error) {
+			return &command.UnlockCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"state": func() (cli.Command, error) {
+			return &command.StateCommand{}, nil
+		},
+
+		"state list": func() (cli.Command, error) {
+			return &command.StateListCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"state rm": func() (cli.Command, error) {
+			return &command.StateRmCommand{
+				StateMeta: command.StateMeta{
+					Meta: meta,
+				},
+			}, nil
+		},
+
+		"state mv": func() (cli.Command, error) {
+			return &command.StateMvCommand{
+				StateMeta: command.StateMeta{
+					Meta: meta,
+				},
+			}, nil
+		},
+
+		"state pull": func() (cli.Command, error) {
+			return &command.StatePullCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"state push": func() (cli.Command, error) {
+			return &command.StatePushCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"state show": func() (cli.Command, error) {
+			return &command.StateShowCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"state replace-provider": func() (cli.Command, error) {
+			return &command.StateReplaceProviderCommand{
+				StateMeta: command.StateMeta{
+					Meta: meta,
+				},
+			}, nil
+		},
+	}
+
+	PrimaryCommands = []string{
+		"init",
+		"validate",
+		"plan",
+		"apply",
+		"destroy",
+	}
+
+	HiddenCommands = map[string]struct{}{
+		"env":             struct{}{},
+		"internal-plugin": struct{}{},
+		"push":            struct{}{},
+	}
+
+	return commands
 }
 
 // **********************************************

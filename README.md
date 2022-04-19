@@ -3,7 +3,7 @@
 [![libterraform](https://img.shields.io/pypi/v/libterraform.svg)](https://pypi.python.org/pypi/libterraform)
 [![libterraform](https://img.shields.io/pypi/l/libterraform.svg)](https://pypi.python.org/pypi/libterraform)
 [![libterraform](https://img.shields.io/pypi/pyversions/libterraform.svg)](https://pypi.python.org/pypi/libterraform)
-[![Release](https://github.com/Prodesire/py-libterraform/actions/workflows/release.yml/badge.svg)](https://github.com/Prodesire/py-libterraform/actions/workflows/release.yml)
+[![Test](https://github.com/Prodesire/py-libterraform/actions/workflows/test.yml/badge.svg)](https://github.com/Prodesire/py-libterraform/actions/workflows/release.yml)
 [![libterraform](https://img.shields.io/pypi/dm/libterraform)](https://pypi.python.org/pypi/libterraform)
 
 Python binding for [Terraform](https://www.terraform.io/).
@@ -13,6 +13,10 @@ Python binding for [Terraform](https://www.terraform.io/).
 ```bash
 $ pip install libterraform
 ```
+
+> **NOTE**
+> - Please install version **0.3.1** or above, which solves the memory leak problem.
+> - This library does **not support** multithreading.
 
 ## Usage
 
