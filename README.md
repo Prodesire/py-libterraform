@@ -24,8 +24,8 @@ $ pip install libterraform
 
 `TerraformCommand` is used to invoke various Terraform commands.
 
-Now, support all commands (`plan`, `apply`, `destroy` etc.), and return a `CommandResult` object.
-The `CommandResult` object has the following properties:
+Now, support all commands (`plan`, `apply`, `destroy` etc.), and return a `CommandResult` object. The `CommandResult`
+object has the following properties:
 
 - `retcode` indicates the command return code. A value of 0 or 2 is normal, otherwise is abnormal.
 - `value` represents command output. If `json=True` is specified when executing the command, the output will be loaded
@@ -40,11 +40,11 @@ To get Terraform verison:
 >>> TerraformCommand().version()
 <CommandResult retcode=0 json=True>
 >>> _.value
-{'terraform_version': '1.1.7', 'platform': 'darwin_arm64', 'provider_selections': {}, 'terraform_outdated': False}
+{'terraform_version': '1.2.2', 'platform': 'darwin_arm64', 'provider_selections': {}, 'terraform_outdated': False}
 >>> TerraformCommand().version(json=False)
 <CommandResult retcode=0 json=False>
 >>> _.value
-'Terraform v1.1.7\non darwin_arm64\n'
+'Terraform v1.2.2\non darwin_arm64\n'
 ```
 
 To `init` and `apply` according to Terraform configuration files in the specified directory:
@@ -62,7 +62,7 @@ Additionally, `run()` can execute arbitrary commands, returning a tuple `(retcod
 
 ```python
 >>> TerraformCommand.run('version')
-(0, 'Terraform v1.1.7\non darwin_arm64\n', '')
+(0, 'Terraform v1.2.2\non darwin_arm64\n', '')
 >>> TerraformCommand.run('invalid')
 (1, '', 'Terraform has no command named "invalid".\n\nTo see all of Terraform\'s top-level commands, run:\n  terraform -help\n\n')
 ```
@@ -85,14 +85,23 @@ respectively.
 dict_keys(['time_sleep.wait1', 'time_sleep.wait2'])
 ```
 
+## Version comparison
+
+| libterraform                                          | Terraform                                                   |
+|-------------------------------------------------------|-------------------------------------------------------------|
+| [0.4.0](https://pypi.org/project/libterraform/0.4.0/) | [1.2.2](https://github.com/hashicorp/terraform/tree/v1.2.2) |
+| [0.3.1](https://pypi.org/project/libterraform/0.3.1/) | [1.1.7](https://github.com/hashicorp/terraform/tree/v1.1.7) |
+
 ## Building & Testing
 
 If you want to develop this library, should first prepare the following environments:
+
 - [GoLang](https://go.dev/dl/) (Version 1.17.x or 1.16.x)
 - [Python](https://www.python.org/downloads/) (Version 3.6~3.10)
 - GCC
 
 Then, initialize git submodule:
+
 ```bash
 $ git submodule init
 $ git submodule update
@@ -105,22 +114,23 @@ $ pip install poetry pytest
 ```
 
 Now, we can build and test:
+
 ```bash
 $ poetry build -f wheel
 $ pytest
 ```
 
-
 ## Why use this library?
-Terraform is a great tool for deploying resources. If you need to call the Terraform command in the Python program
-for deployment, a new process needs to be created to execute the Terraform command on the system. A typical example 
-of this is the [python-terraform](https://github.com/beelit94/python-terraform) library. 
-Doing so has the following problems:
+
+Terraform is a great tool for deploying resources. If you need to call the Terraform command in the Python program for
+deployment, a new process needs to be created to execute the Terraform command on the system. A typical example of this
+is the [python-terraform](https://github.com/beelit94/python-terraform) library. Doing so has the following problems:
+
 - Requires Terraform commands on the system.
 - The overhead of starting a new process is relatively high.
 
-This library compiles Terraform as a **dynamic link library** in advance, and then loads it for calling. 
-So there is no need to install Terraform, nor to start a new process.
+This library compiles Terraform as a **dynamic link library** in advance, and then loads it for calling. So there is no
+need to install Terraform, nor to start a new process.
 
-In addition, since the Terraform dynamic link library is loaded, this library can further call Terraform's 
+In addition, since the Terraform dynamic link library is loaded, this library can further call Terraform's
 **internal capabilities**, such as parsing Terraform config files.
