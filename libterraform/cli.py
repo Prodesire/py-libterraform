@@ -1,7 +1,7 @@
 import os
 from ctypes import *
 from threading import Thread
-from typing import List, Sequence
+from typing import List, Sequence, Union
 
 from libterraform import _lib_tf
 from libterraform.common import json_loads, WINDOWS, CmdType
@@ -312,8 +312,8 @@ class TerraformCommand:
             destroy: bool = None,
             refresh_only: bool = None,
             refresh: bool = None,
-            replace: str = None,
-            target: str = None,
+            replace: Union[str, List[str]] = None,
+            target: Union[str, List[str]] = None,
             vars: dict = None,
             var_files: List[str] = None,
             compact_warnings: bool = None,
@@ -354,6 +354,7 @@ class TerraformCommand:
         :param replace: Force replacement of a particular resource instance using
             its resource address. If the plan would've normally produced an update or
             no-op action for this instance, Terraform will plan to replace it instead.
+            You can use this option multiple times to replace more than one object.
         :param target: Limit the planning operation to only the given module, resource,
             or resource instance and all of its dependencies. You can use this option
             multiple times to include more than one object. This is for exceptional
@@ -975,6 +976,7 @@ class TerraformCommand:
             lock: bool = None,
             lock_timeout: str = None,
             no_color: bool = True,
+            parallelism: int = None,
             **options,
     ) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/refresh
@@ -1003,6 +1005,7 @@ class TerraformCommand:
             same workspace.
         :param lock_timeout: Duration to retry a state lock.
         :param no_color: True to output not contain any color.
+        :param parallelism: Limit the number of concurrent operations. Defaults to 10.
         :param options: More command options.
         """
         options.update(
@@ -1014,6 +1017,7 @@ class TerraformCommand:
             lock=lock,
             lock_timeout=lock_timeout,
             no_color=flag(no_color),
+            parallelism=parallelism,
         )
         retcode, stdout, stderr = self.run('refresh', options=options, chdir=self.cwd, check=check, json=json)
         value = json_loads(stdout, split=True) if json else stdout
