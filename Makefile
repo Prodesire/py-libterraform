@@ -28,6 +28,18 @@ test: clean-pyc
 build:
 	$(PY3) -m poetry build -f wheel
 
+build-all:
+	$(PY3) -m poetry env use python3.7
+	$(PY3) -m poetry build -f wheel
+	$(PY3) -m poetry env use python3.8
+	$(PY3) -m poetry build -f wheel
+	$(PY3) -m poetry env use python3.9
+	$(PY3) -m poetry build -f wheel
+	$(PY3) -m poetry env use python3.10
+	$(PY3) -m poetry build -f wheel
+	$(PY3) -m poetry env use python3.11
+	$(PY3) -m poetry build -f wheel
+
 publish:
 	$(PY3) -m poetry publish
 

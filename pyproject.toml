@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "libterraform"
-version = "0.4.0"
+version = "0.5.0"
 description = "Python binding for Terraform."
 authors = ["Prodesire <wangbinxin001@126.com>"]
 license = "MIT"
@@ -30,7 +30,7 @@ packages = [
 include = ["libterraform/libterraform.so", "libterraform/libterraform.dll"]
 
 [tool.poetry.dependencies]
-python = "^3.6"
+python = "^3.7"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.0.1"
