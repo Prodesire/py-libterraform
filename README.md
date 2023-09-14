@@ -3,7 +3,7 @@
 [![libterraform](https://img.shields.io/pypi/v/libterraform.svg)](https://pypi.python.org/pypi/libterraform)
 [![libterraform](https://img.shields.io/pypi/l/libterraform.svg)](https://pypi.python.org/pypi/libterraform)
 [![libterraform](https://img.shields.io/pypi/pyversions/libterraform.svg)](https://pypi.python.org/pypi/libterraform)
-[![Test](https://github.com/Prodesire/py-libterraform/actions/workflows/test.yml/badge.svg)](https://github.com/Prodesire/py-libterraform/actions/workflows/release.yml)
+[![Test](https://github.com/Prodesire/py-libterraform/actions/workflows/test.yml/badge.svg)](https://github.com/Prodesire/py-libterraform/actions/workflows/test.yml)
 [![libterraform](https://img.shields.io/pypi/dm/libterraform)](https://pypi.python.org/pypi/libterraform)
 
 Python binding for [Terraform](https://www.terraform.io/).
@@ -89,6 +89,7 @@ dict_keys(['time_sleep.wait1', 'time_sleep.wait2'])
 
 | libterraform                                          | Terraform                                                   |
 |-------------------------------------------------------|-------------------------------------------------------------|
+| [0.5.0](https://pypi.org/project/libterraform/0.5.0/) | [1.3.0](https://github.com/hashicorp/terraform/tree/v1.3.0) |
 | [0.4.0](https://pypi.org/project/libterraform/0.4.0/) | [1.2.2](https://github.com/hashicorp/terraform/tree/v1.2.2) |
 | [0.3.1](https://pypi.org/project/libterraform/0.3.1/) | [1.1.7](https://github.com/hashicorp/terraform/tree/v1.1.7) |
 
@@ -96,8 +97,8 @@ dict_keys(['time_sleep.wait1', 'time_sleep.wait2'])
 
 If you want to develop this library, should first prepare the following environments:
 
-- [GoLang](https://go.dev/dl/) (Version 1.17.x or 1.16.x)
-- [Python](https://www.python.org/downloads/) (Version 3.6~3.10)
+- [GoLang](https://go.dev/dl/) (Version 1.18+)
+- [Python](https://www.python.org/downloads/) (Version 3.7~3.10)
 - GCC
 
 Then, initialize git submodule:

@@ -584,7 +584,7 @@ class TerraformCommand:
 
     def fmt(
             self,
-            dir: str = None,
+            dir: Union[str, List[str]] = None,
             check: bool = False,
             no_color: bool = True,
             list: bool = None,
@@ -626,7 +626,12 @@ class TerraformCommand:
             check=flag(check_input),
             recursive=flag(recursive),
         )
-        args = [dir] if dir else None
+        if dir:
+            args = dir
+            if not isinstance(dir, List):
+                args = [dir]
+        else:
+            args = None
         retcode, stdout, stderr = self.run('fmt', args, options=options, chdir=self.cwd, check=check)
         return CommandResult(retcode, stdout, stderr, json=False)
 
@@ -704,7 +709,6 @@ class TerraformCommand:
             id: str,
             check: bool = False,
             config: str = None,
-            allow_missing_config: bool = None,
             input: bool = False,
             lock: bool = None,
             lock_timeout: str = None,
@@ -745,7 +749,6 @@ class TerraformCommand:
             to use to configure the provider. Defaults to pwd.
             If no config files are present, they must be provided
             via the input prompts or env vars.
-        :param allow_missing_config: True to allow import when no resource configuration block exists.
         :param input: False to disable interactive prompts. Note that some actions may
             require interactive prompts and will error if input is disabled.
         :param lock: False to not hold a state lock during backend migration.
@@ -763,7 +766,6 @@ class TerraformCommand:
         """
         options.update(
             config=config,
-            allow_missing_config=flag(allow_missing_config),
             input=input,
             lock=lock,
             lock_timeout=lock_timeout,
@@ -798,6 +800,7 @@ class TerraformCommand:
         :param json: Whether to load stdout as json.
         :param no_color: True to output not contain any color.
         :param state: Path to the state file to read. Defaults to "terraform.tfstate".
+            Ignored when remote state is used.
         :param raw: For value types that can be automatically converted to a string,
             will print the raw string directly, rather than a human-oriented
             representation of the value.
