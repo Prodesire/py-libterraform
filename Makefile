@@ -39,6 +39,8 @@ build-all:
 	$(PY3) -m poetry build -f wheel
 	$(PY3) -m poetry env use python3.11
 	$(PY3) -m poetry build -f wheel
+	rename 's/-macosx_\d+_/-macosx_12_/' dist/*-macosx_*.whl
+
 
 publish:
 	$(PY3) -m poetry publish
