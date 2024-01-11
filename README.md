@@ -89,6 +89,7 @@ dict_keys(['time_sleep.wait1', 'time_sleep.wait2'])
 
 | libterraform                                          | Terraform                                                   |
 |-------------------------------------------------------|-------------------------------------------------------------|
+| [0.6.0](https://pypi.org/project/libterraform/0.6.0/) | [1.5.7](https://github.com/hashicorp/terraform/tree/v1.5.7) |
 | [0.5.0](https://pypi.org/project/libterraform/0.5.0/) | [1.3.0](https://github.com/hashicorp/terraform/tree/v1.3.0) |
 | [0.4.0](https://pypi.org/project/libterraform/0.4.0/) | [1.2.2](https://github.com/hashicorp/terraform/tree/v1.2.2) |
 | [0.3.1](https://pypi.org/project/libterraform/0.3.1/) | [1.1.7](https://github.com/hashicorp/terraform/tree/v1.1.7) |
@@ -98,7 +99,7 @@ dict_keys(['time_sleep.wait1', 'time_sleep.wait2'])
 If you want to develop this library, should first prepare the following environments:
 
 - [GoLang](https://go.dev/dl/) (Version 1.18+)
-- [Python](https://www.python.org/downloads/) (Version 3.7~3.10)
+- [Python](https://www.python.org/downloads/) (Version 3.7~3.11)
 - GCC
 
 Then, initialize git submodule:
