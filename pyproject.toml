@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "libterraform"
-version = "0.7.0"
+version = "0.8.0"
 description = "Python binding for Terraform."
 authors = ["Prodesire <wangbinxin001@126.com>"]
 license = "MIT"
