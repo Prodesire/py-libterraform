@@ -6,8 +6,8 @@ jobs:
   test:
     strategy:
       matrix:
-        os: [ ubuntu-20.04, windows-2019, macos-latest ]
-        python-version: [ '3.7.9', '3.8.10', '3.9.13', '3.10.11', '3.11.5', '3.12.4' ]
+        os: [ ubuntu-20.04, windows-2019, macos-12 ]
+        python-version: [ '3.7.9', '3.8.10', '3.9.13', '3.10.11', '3.11.9', '3.12.4' ]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Check out repository code
@@ -22,7 +22,37 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install poetry pytest
         run: |
-          python -m pip install poetry==1.1.13 pytest==7.0.1
+          python -m pip install poetry pytest
+      - name: Fetch terraform repository
+        run: |
+          git submodule init
+          git submodule update
+      - name: Build distributions
+        run: |
+          poetry build -f wheel -vvv
+      - name: Run tests
+        run: |
+          pytest
+  test-macos-arm64:
+    strategy:
+      matrix:
+        os: [ macos-latest ]
+        python-version: [ '3.8.10', '3.9.13', '3.10.11', '3.11.9', '3.12.4' ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v2
+      - name: Set up GoLang
+        uses: actions/setup-go@v4
+        with:
+          go-version: '^1.21.5'
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install poetry pytest
+        run: |
+          python -m pip install poetry pytest
       - name: Fetch terraform repository
         run: |
           git submodule init
