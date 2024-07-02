@@ -167,7 +167,7 @@ class TerraformCommand:
             self,
             check: bool = False,
             backend: bool = None,
-            backend_config: str = None,
+            backend_config: Union[str, List[str]] = None,
             force_copy: bool = None,
             from_module: str = None,
             get: bool = None,
@@ -181,6 +181,7 @@ class TerraformCommand:
             upgrade: bool = None,
             lockfile: str = None,
             ignore_remote_version: bool = None,
+            test_directory: str = None,
             **options,
     ) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/init
@@ -238,6 +239,7 @@ class TerraformCommand:
             proceed even when there is a potential mismatch.
             See the documentation on configuring Terraform with Terraform Cloud for more
             information.
+        :param test_directory: Set the Terraform test directory, defaults to "tests".
         :param options: More command options.
         """
         options.update(
@@ -256,6 +258,7 @@ class TerraformCommand:
             upgrade=upgrade,
             lockfile=lockfile,
             ignore_remote_version=flag(ignore_remote_version),
+            test_directory=test_directory,
         )
         retcode, stdout, stderr = self.run('init', options=options, chdir=self.cwd, check=check)
         return CommandResult(retcode, stdout, stderr)
@@ -265,6 +268,8 @@ class TerraformCommand:
             check: bool = False,
             json: bool = True,
             no_color: bool = True,
+            no_test: bool = None,
+            test_directory: str = None,
             **options,
     ) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/validate
@@ -296,10 +301,14 @@ class TerraformCommand:
         :param check: Whether to check return code.
         :param json: Whether to load stdout as json.
         :param no_color: True to output not contain any color.
+        :param no_test: If specified, Terraform will not validate test files.
+        :param test_directory: Set the Terraform test directory, defaults to "tests".
         :param options: More command options.
         """
         options.update(
             no_color=flag(no_color),
+            no_test=flag(no_test),
+            test_directory=test_directory
         )
         retcode, stdout, stderr = self.run('validate', options=options, chdir=self.cwd, check=check, json=json)
         value = json_loads(stdout) if json else stdout
@@ -318,6 +327,7 @@ class TerraformCommand:
             var_files: List[str] = None,
             compact_warnings: bool = None,
             detailed_exitcode: bool = None,
+            generate_config_out: str = None,
             input: bool = False,
             lock: bool = None,
             lock_timeout: str = None,
@@ -370,6 +380,12 @@ class TerraformCommand:
             0 - Succeeded, diff is empty (no changes)
             1 - Errored
             2 - Succeeded, there is a diff
+        :param generate_config_out: (Experimental) If import blocks are present in
+            configuration, instructs Terraform to generate HCL
+            for any imported resources not already present. The
+            configuration is written to a new file at PATH,
+            which must not already exist. Terraform may still
+            attempt to write configuration if the plan errors.
         :param input: False to disable interactive prompts. Note that some actions may
             require interactive prompts and will error if input is disabled.
         :param lock: False to not hold a state lock during backend migration.
@@ -394,6 +410,7 @@ class TerraformCommand:
             var_file=var_files,
             compact_warnings=flag(compact_warnings),
             detailed_exitcode=flag(detailed_exitcode),
+            generate_config_out=generate_config_out,
             input=input,
             lock=lock,
             lock_timeout=lock_timeout,
@@ -596,9 +613,16 @@ class TerraformCommand:
     ) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/fmt
 
-        Rewrites all Terraform configuration files to a canonical format. Both
-        configuration files (.tf) and variables files (.tfvars) are updated.
-        JSON files (.tf.json or .tfvars.json) are not modified.
+        Rewrites all Terraform configuration files to a canonical format. All
+        configuration files (.tf), variables files (.tfvars), and testing files
+        (.tftest.hcl) are updated. JSON files (.tf.json, .tfvars.json, or
+        .tftest.json) are not modified.
+
+        By default, fmt scans the current directory for configuration files. If you
+        provide a directory for the target argument, then fmt will scan that
+        directory instead. If you provide a file, then fmt will process just that
+        file. If you provide a single dash ("-"), then fmt will read from standard
+        input (STDIN).
 
         If DIR is not specified then the current working directory will be used.
         If DIR is "-" then content will be read from STDIN. The given content must
@@ -666,6 +690,43 @@ class TerraformCommand:
         retcode, stdout, stderr = self.run('force-unlock', args, options=options, chdir=self.cwd, check=check)
         return CommandResult(retcode, stdout, stderr, json=False)
 
+    def get(
+            self,
+            check: bool = False,
+            no_color: bool = True,
+            update: bool = None,
+            test_directory: str = None,
+            **options,
+    ) -> CommandResult:
+        """Refer to https://www.terraform.io/docs/commands/get
+
+        Downloads and installs modules needed for the configuration in the
+        current working directory.
+
+        This recursively downloads all modules needed, such as modules
+        imported by modules imported by the root and so on. If a module is
+        already downloaded, it will not be redownloaded or checked for updates
+        unless the -update flag is specified.
+
+        Module installation also happens automatically by default as part of
+        the "terraform init" command, so you should rarely need to run this
+        command separately.
+
+        :param check: Whether to check return code.
+        :param no_color: True to output not contain any color.
+        :param update: Check already-downloaded modules for available updates
+            and install the newest versions available.
+        :param test_directory: Set the Terraform test directory, defaults to "tests".
+        :param options: More command options.
+        """
+        options.update(
+            no_color=flag(no_color),
+            update=flag(update),
+            test_directory=test_directory,
+        )
+        retcode, stdout, stderr = self.run('get', options=options, chdir=self.cwd, check=check)
+        return CommandResult(retcode, stdout, stderr, json=False)
+
     def graph(
             self,
             check: bool = False,
@@ -730,9 +791,12 @@ class TerraformCommand:
         into the state. It does not generate configuration. A future version of
         Terraform will also generate configuration.
 
-        Because of this, prior to running terraform import it is necessary to write
-        a resource configuration block for the resource manually, to which the
-        imported object will be attached.
+        The ADDR specified is the address to import the resource to. Please
+        see the documentation online for resource addresses. The ID is a
+        resource-specific ID to identify that resource being imported. Please
+        reference the documentation for the resource type you're importing to
+        determine the ID syntax to use. It typically matches directly to the ID
+        that the provider uses.
 
         This command will not modify your infrastructure, but it will make
         network requests to inspect parts of your infrastructure relevant to
@@ -823,6 +887,7 @@ class TerraformCommand:
             check: bool = False,
             no_color: bool = True,
             json: bool = False,
+            test_directory: str = None,
             **options,
     ) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/providers
@@ -839,10 +904,12 @@ class TerraformCommand:
         :param check: Whether to check return code.
         :param no_color: True to output not contain any color.
         :param json: Whether to load stdout as json. Only valid when subcmd=schema.
+        :param test_directory: Set the Terraform test directory, defaults to "tests".
         :param options: More command options.
         """
         options.update(
             no_color=flag(no_color),
+            test_directory=test_directory,
         )
         cmd = ['providers']
         if subcmd:
@@ -858,7 +925,7 @@ class TerraformCommand:
             no_color: bool = True,
             fs_mirror: str = None,
             net_mirror: str = None,
-            platform: str = None,
+            platform: Union[str, List[str]] = None,
             **options,
     ) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/providers/lock
@@ -916,7 +983,7 @@ class TerraformCommand:
             target_dir: str,
             check: bool = False,
             no_color: bool = True,
-            platform: str = None,
+            platform: Union[str, List[str]] = None,
             **options,
     ) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/providers/mirror
@@ -971,7 +1038,7 @@ class TerraformCommand:
             self,
             check: bool = False,
             json: bool = True,
-            target: str = None,
+            target: Union[str, List[str]] = None,
             vars: dict = None,
             var_files: List[str] = None,
             compact_warnings: bool = None,
@@ -1453,81 +1520,60 @@ class TerraformCommand:
             self,
             check: bool = False,
             vars: dict = None,
+            var_files: List[str] = None,
             no_color: bool = True,
-            compact_warnings: bool = None,
-            junit_xml: str = None,
+            cloud_run: str = None,
+            filter: Union[str, List[str]] = None,
+            json: bool = True,
+            test_directory: str = None,
+            verbose: bool = None,
             **options,
     ):
         """Refer to https://www.terraform.io/cli/commands/test
 
-        This is an experimental command to help with automated integration
-        testing of shared modules. The usage and behavior of this command is
-        likely to change in breaking ways in subsequent releases, as we
-        are currently using this command primarily for research purposes.
+        Executes automated integration tests against the current Terraform
+        configuration.
 
-        In its current experimental form, "test" will look under the current
-        working directory for a subdirectory called "tests", and then within
-        that directory search for one or more subdirectories that contain
-        ".tf" or ".tf.json" files. For any that it finds, it will perform
-        Terraform operations similar to the following sequence of commands
-        in each of those directories:
-          terraform validate
-          terraform apply
-          terraform destroy
+        Terraform will search for .tftest.hcl files within the current configuration
+        and testing directories. Terraform will then execute the testing run blocks
+        within any testing files in order, and verify conditional checks and
+        assertions against the created infrastructure.
 
-        The test configurations should not declare any input variables and
-        should at least contain a call to the module being tested, which
-        will always be available at the path ../.. due to the expected
-        filesystem layout.
+        This command creates real infrastructure and will attempt to clean up the
+        testing infrastructure on completion. Monitor the output carefully to ensure
+        this cleanup process is successful.
 
-        The tests are considered to be successful if all of the above steps
-        succeed.
-
-        Test configurations may optionally include uses of the special
-        built-in test provider terraform.io/builtin/test, which allows
-        writing explicit test assertions which must also all pass in order
-        for the test run to be considered successful.
-
-        This initial implementation is intended as a minimally-viable
-        product to use for further research and experimentation, and in
-        particular it currently lacks the following capabilities that we
-        expect to consider in later iterations, based on feedback:
-            - Testing of subsequent updates to existing infrastructure,
-              where currently it only supports initial creation and
-              then destruction.
-            - Testing top-level modules that are intended to be used for
-              "real" environments, which typically have hard-coded values
-              that don't permit creating a separate "copy" for testing.
-            - Some sort of support for unit test runs that don't interact
-              with remote systems at all, e.g. for use in checking pull
-              requests from untrusted contributors.
-
-        In the meantime, we'd like to hear feedback from module authors
-        who have tried writing some experimental tests for their modules
-        about what sorts of tests you were able to write, what sorts of
-        tests you weren't able to write, and any tests that you were
-        able to write but that were difficult to model in some way.
+        By default, this assumes you want to get json output.
 
         :param check: Whether to check return code.
         :param vars: Set variables in the root module of the configuration.
+        :param var_files: Load variable values from the given file, in addition
+            to the default files terraform.tfvars and *.auto.tfvars.
         :param no_color: True to output not contain any color.
-        :param compact_warnings: Use a more compact representation for warnings, if
-             this command produces only warnings and no errors.
-        :param junit_xml: In addition to the usual output, also write test
-            results to the given file path in JUnit XML format.
-            This format is commonly supported by CI systems, and they typically
-            expect to be given a filename to search for in the test workspace
-            after the test run finishes.
+        :param cloud_run: If specified, Terraform will execute this test run
+            remotely using Terraform Cloud. You must specify the
+            source of a module registered in a private module
+            registry as the argument to this flag. This allows
+            Terraform to associate the cloud run with the correct
+            Terraform Cloud module and organization.
+        :param json: Whether to load stdout as json.
+        :param test_directory: Set the Terraform test directory, defaults to "tests".
+        :param verbose: Print the plan or state for each test run block as it
+            executes.
         :param options: More command options.
         """
         options.update(
             var=vars,
+            var_file=var_files,
             no_color=flag(no_color),
-            compact_warnings=flag(compact_warnings),
-            junit_xml=junit_xml,
+            cloud_run=cloud_run,
+            filter=filter,
+            test_directory=test_directory,
+            verbose=flag(verbose),
         )
-        retcode, stdout, stderr = self.run('test', options=options, chdir=self.cwd, check=check)
-        return CommandResult(retcode, stdout, stderr)
+        retcode, stdout, stderr = self.run('test', options=options, chdir=self.cwd, check=check, json=json)
+        value = json_loads(stdout, split=True) if json else stdout
+        return CommandResult(retcode, value, stderr, json=json)
 
     def workspace(
             self,

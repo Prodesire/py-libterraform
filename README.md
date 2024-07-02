@@ -40,11 +40,11 @@ To get Terraform verison:
 >>> TerraformCommand().version()
 <CommandResult retcode=0 json=True>
 >>> _.value
-{'terraform_version': '1.2.2', 'platform': 'darwin_arm64', 'provider_selections': {}, 'terraform_outdated': False}
+{'terraform_version': '1.6.6', 'platform': 'darwin_arm64', 'provider_selections': {}, 'terraform_outdated': True}
 >>> TerraformCommand().version(json=False)
 <CommandResult retcode=0 json=False>
 >>> _.value
-'Terraform v1.2.2\non darwin_arm64\n'
+'Terraform v1.6.6\non darwin_arm64\n'
 ```
 
 To `init` and `apply` according to Terraform configuration files in the specified directory:
@@ -62,7 +62,7 @@ Additionally, `run()` can execute arbitrary commands, returning a tuple `(retcod
 
 ```python
 >>> TerraformCommand.run('version')
-(0, 'Terraform v1.2.2\non darwin_arm64\n', '')
+(0, 'Terraform v1.6.6\non darwin_arm64\n', '')
 >>> TerraformCommand.run('invalid')
 (1, '', 'Terraform has no command named "invalid".\n\nTo see all of Terraform\'s top-level commands, run:\n  terraform -help\n\n')
 ```
@@ -100,7 +100,7 @@ dict_keys(['time_sleep.wait1', 'time_sleep.wait2'])
 If you want to develop this library, should first prepare the following environments:
 
 - [GoLang](https://go.dev/dl/) (Version 1.21.5+)
-- [Python](https://www.python.org/downloads/) (Version 3.7~3.11)
+- [Python](https://www.python.org/downloads/) (Version 3.7~3.12)
 - GCC
 
 Then, initialize git submodule:

@@ -6,10 +6,10 @@ from tests.consts import TF_SLEEP2_DIR
 
 class TestTerraformCommandTest:
     def test_test(self, cli: TerraformCommand):
-        r = cli.test()
+        r = cli.test(json=False)
         assert r.retcode == 0, r.error
         assert "Success! 0 passed, 0 failed." in r.value
-        assert "".__eq__(r.error)
+        assert not r.error
 
     def test_test_run(self):
         cwd = TF_SLEEP2_DIR
@@ -20,7 +20,7 @@ class TestTerraformCommandTest:
             cli.init()
         r = cli.test()
         assert r.retcode == 0, r.error
-        assert "Success! 1 passed, 0 failed." in r.value
+        assert r.value[-1]['test_summary']['status'] == "pass"
 
     def test_test_assertion_error(self):
         cwd = TF_SLEEP2_DIR
@@ -31,4 +31,4 @@ class TestTerraformCommandTest:
             cli.init()
         r = cli.test(vars={"sleep2_time1": "2s"})
         assert r.retcode == 1
-        assert "libterraform test success!" in r.error
+        assert r.value[-1]['test_summary']['status'] == "fail"
