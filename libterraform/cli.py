@@ -1452,6 +1452,7 @@ class TerraformCommand:
     def test(
             self,
             check: bool = False,
+            vars: dict = None,
             no_color: bool = True,
             compact_warnings: bool = None,
             junit_xml: str = None,
@@ -1508,6 +1509,7 @@ class TerraformCommand:
         able to write but that were difficult to model in some way.
 
         :param check: Whether to check return code.
+        :param vars: Set variables in the root module of the configuration.
         :param no_color: True to output not contain any color.
         :param compact_warnings: Use a more compact representation for warnings, if
              this command produces only warnings and no errors.
@@ -1519,6 +1521,7 @@ class TerraformCommand:
         :param options: More command options.
         """
         options.update(
+            var=vars,
             no_color=flag(no_color),
             compact_warnings=flag(compact_warnings),
             junit_xml=junit_xml,

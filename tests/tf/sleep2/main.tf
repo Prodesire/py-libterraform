@@ -9,17 +9,17 @@ variable "sleep2_time2" {
 }
 
 resource "time_sleep" "sleep2_wait1" {
-  create_duration = var.time1
+  create_duration = var.sleep2_time1
 }
 
 resource "time_sleep" "sleep2_wait2" {
-  create_duration = var.time2
+  create_duration = var.sleep2_time2
 }
 
 output "sleep2_wait1_id" {
-  value = time_sleep.wait1.id
+  value = time_sleep.sleep2_wait1.id
 }
 
 output "sleep2_wait2_id" {
-  value = time_sleep.wait2.id
+  value = time_sleep.sleep2_wait2.id
 }

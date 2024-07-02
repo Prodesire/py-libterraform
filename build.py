@@ -52,7 +52,8 @@ def build(setup_kwargs):
     try:
         print('      - Building libterraform')
         subprocess.check_call(
-            ['go', 'build', '-buildmode=c-shared', f'-o={lib_filename}', tf_package_name],
+            ['go', 'build', '-buildmode=c-shared', f'-o={lib_filename}',
+            "-ldflags", "-X github.com/hashicorp/terraform/version.dev=no", tf_package_name],
             cwd=terraform_dirname
         )
         shutil.move(lib_path, os.path.join(root, 'libterraform', lib_filename))
