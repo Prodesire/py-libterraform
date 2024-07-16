@@ -23,7 +23,7 @@ import (
 	"github.com/hashicorp/terraform/internal/logging"
 	"github.com/hashicorp/terraform/internal/terminal"
 	"github.com/hashicorp/terraform/version"
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
 	"github.com/mitchellh/colorstring"
 	"go.opentelemetry.io/otel/trace"
 	"log"
