@@ -202,7 +202,7 @@ class TerraformCommand:
         By default, this assumes you want to get json output.
 
         :param check: Whether to check return code.
-        :param backend: False to disable backend or Terraform Cloud initialization
+        :param backend: False to disable backend or HCP Terraform initialization
             for this configuration and use what was previously initialized instead.
         :param backend_config: Configuration to be merged with what is in the
             configuration file's 'backend' block. This can be either a path to an
@@ -233,12 +233,12 @@ class TerraformCommand:
             the version recorded in the dependency lockfile.
         :param lockfile: Set a dependency lockfile mode.
             Currently only "readonly" is valid.
-        :param ignore_remote_version: A rare option used for Terraform Cloud and the
+        :param ignore_remote_version: A rare option used for HCP Terraform and the
             remote backend only. Set this to ignore checking that the local and remote
             Terraform versions use compatible state representations, making an operation
             proceed even when there is a potential mismatch.
-            See the documentation on configuring Terraform with Terraform Cloud for more
-            information.
+            See the documentation on configuring Terraform with
+            HCP Terraform or Terraform Enterprise for more information.
         :param test_directory: Set the Terraform test directory, defaults to "tests".
         :param options: More command options.
         """
@@ -741,6 +741,12 @@ class TerraformCommand:
         Produces a representation of the dependency graph between different
         objects in the current configuration and state.
 
+        By default the graph shows a summary only of the relationships between
+        resources in the configuration, since those are the main objects that
+        have side-effects whose ordering is significant. You can generate more
+        detailed graphs reflecting Terraform's actual evaluation strategy
+        by specifying the -type=TYPE option to select an operation type.
+
         The graph is presented in the DOT language. The typical program that can
         read this format is GraphViz, but many web services are also available
         to read this format.
@@ -748,11 +754,17 @@ class TerraformCommand:
         :param check: Whether to check return code.
         :param no_color: True to output not contain any color.
         :param plan: Render graph using the specified plan file instead of the
-            configuration in the current directory.
+            configuration in the current directory.  Implies type=apply.
         :param draw_cycles: True to highlight any cycles in the graph with colored edges.
-            This helps when diagnosing cycle errors.
-        :param type: Type of graph to output. Can be: plan, plan-refresh-only, plan-destroy, or apply.
-            By default, Terraform chooses "plan", or "apply" if you also set the plan=xxx option.
+            This helps when diagnosing cycle errors. This option is
+            supported only when illustrating a real evaluation graph,
+            selected using the type=TYPE option.
+        :param type: Type of operation graph to output. Can be: plan,
+            plan-refresh-only, plan-destroy, or apply. By default
+            Terraform just summarizes the relationships between the
+            resources in your configuration, without any particular
+            operation in mind. Full operation graphs are more detailed
+            but therefore often harder to read.
         :param options: More command options.
         """
         options.update(
@@ -926,6 +938,7 @@ class TerraformCommand:
             fs_mirror: str = None,
             net_mirror: str = None,
             platform: Union[str, List[str]] = None,
+            enable_plugin_cache: bool = False,
             **options,
     ) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/providers/lock
@@ -969,12 +982,16 @@ class TerraformCommand:
             Target names consist of an operating system and a CPU architecture. For example,
             "linux_amd64" selects the Linux operating system running on an AMD64 or x86_64 CPU.
             Each provider is available only for a limited set of target platforms.
+        :param enable_plugin_cache: Enable the usage of the globally configured plugin cache.
+            This will speed up the locking process, but the providers
+            wont be loaded from an authoritative source.
         :param options: More command options.
         """
         options.update(
             fs_mirror=fs_mirror,
             net_mirror=net_mirror,
             platform=platform,
+            enable_plugin_cache=flag(enable_plugin_cache),
         )
         return self.providers(subcmd='lock', args=providers, check=check, no_color=no_color, **options)
 
@@ -1551,11 +1568,12 @@ class TerraformCommand:
             to the default files terraform.tfvars and *.auto.tfvars.
         :param no_color: True to output not contain any color.
         :param cloud_run: If specified, Terraform will execute this test run
-            remotely using Terraform Cloud. You must specify the
-            source of a module registered in a private module
-            registry as the argument to this flag. This allows
-            Terraform to associate the cloud run with the correct
-            Terraform Cloud module and organization.
+            remotely using HCP Terraform or Terraform Enterpise.
+            You must specify the source of a module registered in
+            a private module registry as the argument to this flag.
+            This allows Terraform to associate the cloud run with
+            the correct HCP Terraform or Terraform Enterprise module
+            and organization.
         :param json: Whether to load stdout as json.
         :param test_directory: Set the Terraform test directory, defaults to "tests".
         :param verbose: Print the plan or state for each test run block as it
