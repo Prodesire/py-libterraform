@@ -8,6 +8,6 @@ class TestTerraformCommandPlan:
         assert isinstance(r.value, list)
 
     def test_plan_with_vars(self, cli: TerraformCommand):
-        r = cli.plan(vars={'time1': '1s', 'time2': '2s'})
+        r = cli.plan(vars={"time1": "1s", "time2": "2s"})
         assert r.retcode == 0, r.error
         assert isinstance(r.value, list)

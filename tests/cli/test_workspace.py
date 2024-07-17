@@ -3,11 +3,11 @@ from libterraform import TerraformCommand
 
 class TestTerraformCommandWorkSpace:
     def test_all(self, cli: TerraformCommand):
-        default_name = 'default'
-        name = 'test'
+        default_name = "default"
+        name = "test"
         r = cli.workspace_new(name)
         assert r.retcode == 0, r.error
-        assert 'Created and switched to workspace' in r.value
+        assert "Created and switched to workspace" in r.value
 
         r = cli.workspace_show()
         assert r.retcode == 0, r.error

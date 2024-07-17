@@ -20,7 +20,7 @@ class TestTerraformCommandTest:
             cli.init()
         r = cli.test()
         assert r.retcode == 0, r.error
-        assert r.value[-1]['test_summary']['status'] == "pass"
+        assert r.value[-1]["test_summary"]["status"] == "pass"
 
     def test_test_assertion_error(self):
         cwd = TF_SLEEP2_DIR
@@ -31,4 +31,4 @@ class TestTerraformCommandTest:
             cli.init()
         r = cli.test(vars={"sleep2_time1": "2s"})
         assert r.retcode == 1
-        assert r.value[-1]['test_summary']['status'] == "fail"
+        assert r.value[-1]["test_summary"]["status"] == "fail"

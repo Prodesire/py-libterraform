@@ -6,9 +6,9 @@ class TestTerraformCommandValidate:
         r = cli.validate()
         assert r.retcode == 0, r.error
         assert r.value == {
-            'format_version': '1.0',
-            'valid': True,
-            'error_count': 0,
-            'warning_count': 0,
-            'diagnostics': []
+            "format_version": "1.0",
+            "valid": True,
+            "error_count": 0,
+            "warning_count": 0,
+            "diagnostics": [],
         }

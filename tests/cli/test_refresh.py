@@ -11,7 +11,7 @@ class TestTerraformCommandRefresh:
         assert r.value
 
     def test_refresh_with_target(self, cli: TerraformCommand):
-        r = cli.refresh(target='time_sleep.wait1')
+        r = cli.refresh(target="time_sleep.wait1")
         assert r.retcode == 0, r.error
         assert r.value
 

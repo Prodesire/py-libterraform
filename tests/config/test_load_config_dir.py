@@ -8,9 +8,9 @@ from tests.consts import TF_SLEEP_DIR
 class TestTerraformConfig:
     def test_load_config_dir(self):
         mod, diags = TerraformConfig.load_config_dir(TF_SLEEP_DIR)
-        assert 'time_sleep.wait1' in mod['ManagedResources']
-        assert 'time_sleep.wait2' in mod['ManagedResources']
+        assert "time_sleep.wait1" in mod["ManagedResources"]
+        assert "time_sleep.wait2" in mod["ManagedResources"]
 
     def test_load_config_dir_no_exits(self):
         with pytest.raises(LibTerraformError):
-            TerraformConfig.load_config_dir('not-exits')
+            TerraformConfig.load_config_dir("not-exits")

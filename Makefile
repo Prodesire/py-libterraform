@@ -58,3 +58,7 @@ clean-pyc:
 clean-build:
 	rm -rf build dist *.egg-info .eggs
 	find . -name '*.h' -exec rm -f {} +
+
+format:
+	$(PY3) -m poetry run isort libterraform tests
+	$(PY3) -m poetry run ruff format libterraform tests

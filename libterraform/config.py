@@ -1,14 +1,12 @@
 import json
 from ctypes import *
 
-from libterraform import _lib_tf, _free
+from libterraform import _free, _lib_tf
 from libterraform.exceptions import LibTerraformError
 
 
 class LoadConfigDirResult(Structure):
-    _fields_ = [("r0", c_void_p),
-                ("r1", c_void_p),
-                ("r2", c_void_p)]
+    _fields_ = [("r0", c_void_p), ("r1", c_void_p), ("r2", c_void_p)]
 
 
 _load_config_dir = _lib_tf.ConfigLoadConfigDir
@@ -26,7 +24,7 @@ class TerraformConfig:
         .tf files are parsed using the HCL native syntax while .tf.json files are
         parsed using the HCL JSON syntax.
         """
-        ret = _load_config_dir(path.encode('utf-8'))
+        ret = _load_config_dir(path.encode("utf-8"))
         r_mod = cast(ret.r0, c_char_p).value
         _free(ret.r0)
         r_diags = cast(ret.r1, c_char_p).value
@@ -37,7 +35,7 @@ class TerraformConfig:
         if err:
             raise LibTerraformError(err)
         if r_mod is None:
-            msg = f'The given directory {path!r} does not exist at all or could not be opened for some reason.'
+            msg = f"The given directory {path!r} does not exist at all or could not be opened for some reason."
             raise LibTerraformError(msg)
 
         mod = json.loads(r_mod)

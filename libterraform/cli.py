@@ -4,7 +4,7 @@ from threading import Thread
 from typing import List, Sequence, Union
 
 from libterraform import _lib_tf
-from libterraform.common import json_loads, WINDOWS, CmdType
+from libterraform.common import WINDOWS, CmdType, json_loads
 from libterraform.exceptions import TerraformCommandError, TerraformFdReadError
 
 _run_cli = _lib_tf.RunCli
@@ -16,7 +16,7 @@ def flag(value):
 
 
 class CommandResult:
-    __slots__ = ('retcode', 'value', 'error', 'json')
+    __slots__ = ("retcode", "value", "error", "json")
 
     def __init__(self, retcode, value, error=None, json=False):
         self.retcode = retcode
@@ -25,7 +25,7 @@ class CommandResult:
         self.json = json
 
     def __repr__(self):
-        return f'<CommandResult retcode={self.retcode!r} json={self.json!r}>'
+        return f"<CommandResult retcode={self.retcode!r} json={self.json!r}>"
 
 
 class TerraformCommand:
@@ -39,13 +39,13 @@ class TerraformCommand:
 
     @classmethod
     def run(
-            cls,
-            cmd: CmdType,
-            args: Sequence[str] = None,
-            options: dict = None,
-            chdir=None,
-            check: bool = False,
-            json=False
+        cls,
+        cmd: CmdType,
+        args: Sequence[str] = None,
+        options: dict = None,
+        chdir=None,
+        check: bool = False,
+        json=False,
     ) -> (int, str, str):
         """
         Run command with args and return a tuple (retcode, stdout, stderr).
@@ -76,7 +76,7 @@ class TerraformCommand:
         """
         argv = []
         if chdir:
-            argv.append(f'-chdir={chdir}')
+            argv.append(f"-chdir={chdir}")
         if isinstance(cmd, (list, tuple)):
             argv.extend(cmd)
         else:
@@ -88,27 +88,27 @@ class TerraformCommand:
             for option, value in options.items():
                 if value is None:
                     continue
-                if '_' in option:
-                    option = option.replace('_', '-')
+                if "_" in option:
+                    option = option.replace("_", "-")
                 if value is ...:
-                    argv += [f'-{option}']
+                    argv += [f"-{option}"]
                     continue
                 if isinstance(value, list):
                     for val in value:
-                        argv += [f'-{option}={val}']
+                        argv += [f"-{option}={val}"]
                     continue
                 if isinstance(value, dict):
                     for k, v in value.items():
-                        argv += [f'-{option}={k}={v}']
+                        argv += [f"-{option}={k}={v}"]
                     continue
                 if isinstance(value, bool):
-                    value = 'true' if value else 'false'
-                argv += [f'-{option}={value}']
+                    value = "true" if value else "false"
+                argv += [f"-{option}={value}"]
         if args:
             argv.extend(args)
         argc = len(argv)
         c_argv = (c_char_p * argc)()
-        c_argv[:] = [arg.encode('utf-8') for arg in argv]
+        c_argv[:] = [arg.encode("utf-8") for arg in argv]
         r_stdout_fd, w_stdout_fd = os.pipe()
         r_stderr_fd, w_stderr_fd = os.pipe()
 
@@ -123,6 +123,7 @@ class TerraformCommand:
 
         if WINDOWS:
             import msvcrt
+
             w_stdout_handle = msvcrt.get_osfhandle(w_stdout_fd)
             w_stderr_handle = msvcrt.get_osfhandle(w_stderr_fd)
             retcode = _run_cli(argc, c_argv, w_stdout_handle, w_stderr_handle)
@@ -144,11 +145,13 @@ class TerraformCommand:
 
     @staticmethod
     def _fdread(std_fd, std_buffer):
-        with os.fdopen(std_fd, encoding='utf-8') as std_f:
+        with os.fdopen(std_fd, encoding="utf-8") as std_f:
             std = std_f.read()
             std_buffer.append(std)
 
-    def version(self, check: bool = False, json: bool = True, **options) -> CommandResult:
+    def version(
+        self, check: bool = False, json: bool = True, **options
+    ) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/version
 
         Displays the version of Terraform and all installed plugins.
@@ -159,30 +162,32 @@ class TerraformCommand:
         :param json: Whether to load stdout as json.
         :param options: More command options.
         """
-        retcode, stdout, stderr = self.run('version', options=options, check=check, json=json)
+        retcode, stdout, stderr = self.run(
+            "version", options=options, check=check, json=json
+        )
         value = json_loads(stdout) if json else stdout
         return CommandResult(retcode, value, stderr, json)
 
     def init(
-            self,
-            check: bool = False,
-            backend: bool = None,
-            backend_config: Union[str, List[str]] = None,
-            force_copy: bool = None,
-            from_module: str = None,
-            get: bool = None,
-            input: bool = False,
-            lock: bool = None,
-            lock_timeout: str = None,
-            no_color: bool = True,
-            plugin_dirs: List[str] = None,
-            reconfigure: bool = None,
-            migrate_state: bool = None,
-            upgrade: bool = None,
-            lockfile: str = None,
-            ignore_remote_version: bool = None,
-            test_directory: str = None,
-            **options,
+        self,
+        check: bool = False,
+        backend: bool = None,
+        backend_config: Union[str, List[str]] = None,
+        force_copy: bool = None,
+        from_module: str = None,
+        get: bool = None,
+        input: bool = False,
+        lock: bool = None,
+        lock_timeout: str = None,
+        no_color: bool = True,
+        plugin_dirs: List[str] = None,
+        reconfigure: bool = None,
+        migrate_state: bool = None,
+        upgrade: bool = None,
+        lockfile: str = None,
+        ignore_remote_version: bool = None,
+        test_directory: str = None,
+        **options,
     ) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/init
 
@@ -260,17 +265,19 @@ class TerraformCommand:
             ignore_remote_version=flag(ignore_remote_version),
             test_directory=test_directory,
         )
-        retcode, stdout, stderr = self.run('init', options=options, chdir=self.cwd, check=check)
+        retcode, stdout, stderr = self.run(
+            "init", options=options, chdir=self.cwd, check=check
+        )
         return CommandResult(retcode, stdout, stderr)
 
     def validate(
-            self,
-            check: bool = False,
-            json: bool = True,
-            no_color: bool = True,
-            no_test: bool = None,
-            test_directory: str = None,
-            **options,
+        self,
+        check: bool = False,
+        json: bool = True,
+        no_color: bool = True,
+        no_test: bool = None,
+        test_directory: str = None,
+        **options,
     ) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/validate
 
@@ -308,34 +315,36 @@ class TerraformCommand:
         options.update(
             no_color=flag(no_color),
             no_test=flag(no_test),
-            test_directory=test_directory
+            test_directory=test_directory,
         )
-        retcode, stdout, stderr = self.run('validate', options=options, chdir=self.cwd, check=check, json=json)
+        retcode, stdout, stderr = self.run(
+            "validate", options=options, chdir=self.cwd, check=check, json=json
+        )
         value = json_loads(stdout) if json else stdout
         return CommandResult(retcode, value, stderr, json=json)
 
     def plan(
-            self,
-            check: bool = False,
-            json: bool = True,
-            destroy: bool = None,
-            refresh_only: bool = None,
-            refresh: bool = None,
-            replace: Union[str, List[str]] = None,
-            target: Union[str, List[str]] = None,
-            vars: dict = None,
-            var_files: List[str] = None,
-            compact_warnings: bool = None,
-            detailed_exitcode: bool = None,
-            generate_config_out: str = None,
-            input: bool = False,
-            lock: bool = None,
-            lock_timeout: str = None,
-            no_color: bool = True,
-            out: str = None,
-            parallelism: int = None,
-            state: str = None,
-            **options,
+        self,
+        check: bool = False,
+        json: bool = True,
+        destroy: bool = None,
+        refresh_only: bool = None,
+        refresh: bool = None,
+        replace: Union[str, List[str]] = None,
+        target: Union[str, List[str]] = None,
+        vars: dict = None,
+        var_files: List[str] = None,
+        compact_warnings: bool = None,
+        detailed_exitcode: bool = None,
+        generate_config_out: str = None,
+        input: bool = False,
+        lock: bool = None,
+        lock_timeout: str = None,
+        no_color: bool = True,
+        out: str = None,
+        parallelism: int = None,
+        state: str = None,
+        **options,
     ) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/plan
 
@@ -419,17 +428,19 @@ class TerraformCommand:
             parallelism=parallelism,
             state=state,
         )
-        retcode, stdout, stderr = self.run('plan', options=options, chdir=self.cwd, check=check, json=json)
+        retcode, stdout, stderr = self.run(
+            "plan", options=options, chdir=self.cwd, check=check, json=json
+        )
         value = json_loads(stdout, split=True) if json else stdout
         return CommandResult(retcode, value, stderr, json=json)
 
     def show(
-            self,
-            path: str = None,
-            check: bool = False,
-            json: bool = True,
-            no_color: bool = True,
-            **options,
+        self,
+        path: str = None,
+        check: bool = False,
+        json: bool = True,
+        no_color: bool = True,
+        **options,
     ) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/show
 
@@ -448,27 +459,29 @@ class TerraformCommand:
             no_color=flag(no_color),
         )
         args = [path] if path else None
-        retcode, stdout, stderr = self.run('show', args, options=options, chdir=self.cwd, check=check, json=json)
+        retcode, stdout, stderr = self.run(
+            "show", args, options=options, chdir=self.cwd, check=check, json=json
+        )
         value = json_loads(stdout) if json else stdout
         return CommandResult(retcode, value, stderr, json=json)
 
     def apply(
-            self,
-            plan: str = None,
-            check: bool = False,
-            json: bool = True,
-            auto_approve: bool = True,
-            backup: str = None,
-            compact_warnings: bool = None,
-            input: bool = False,
-            lock: bool = None,
-            lock_timeout: str = None,
-            no_color: bool = True,
-            parallelism: int = None,
-            state: str = None,
-            state_out: str = None,
-            destroy: bool = None,
-            **options,
+        self,
+        plan: str = None,
+        check: bool = False,
+        json: bool = True,
+        auto_approve: bool = True,
+        backup: str = None,
+        compact_warnings: bool = None,
+        input: bool = False,
+        lock: bool = None,
+        lock_timeout: str = None,
+        no_color: bool = True,
+        parallelism: int = None,
+        state: str = None,
+        state_out: str = None,
+        destroy: bool = None,
+        **options,
     ) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/apply
 
@@ -527,25 +540,27 @@ class TerraformCommand:
             destroy=flag(destroy),
         )
         args = [plan] if plan else None
-        retcode, stdout, stderr = self.run('apply', args, options=options, chdir=self.cwd, check=check, json=json)
+        retcode, stdout, stderr = self.run(
+            "apply", args, options=options, chdir=self.cwd, check=check, json=json
+        )
         value = json_loads(stdout, split=True) if json else stdout
         return CommandResult(retcode, value, stderr, json=json)
 
     def destroy(
-            self,
-            check: bool = False,
-            json: bool = True,
-            auto_approve: bool = True,
-            backup: str = None,
-            compact_warnings: bool = None,
-            input: bool = False,
-            lock: bool = None,
-            lock_timeout: str = None,
-            no_color: bool = True,
-            parallelism: int = None,
-            state: str = None,
-            state_out: str = None,
-            **options,
+        self,
+        check: bool = False,
+        json: bool = True,
+        auto_approve: bool = True,
+        backup: str = None,
+        compact_warnings: bool = None,
+        input: bool = False,
+        lock: bool = None,
+        lock_timeout: str = None,
+        no_color: bool = True,
+        parallelism: int = None,
+        state: str = None,
+        state_out: str = None,
+        **options,
     ) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/destroy
 
@@ -595,21 +610,23 @@ class TerraformCommand:
             state=state,
             state_out=state_out,
         )
-        retcode, stdout, stderr = self.run('destroy', options=options, chdir=self.cwd, check=check, json=json)
+        retcode, stdout, stderr = self.run(
+            "destroy", options=options, chdir=self.cwd, check=check, json=json
+        )
         value = json_loads(stdout, split=True) if json else stdout
         return CommandResult(retcode, value, stderr, json=json)
 
     def fmt(
-            self,
-            dir: Union[str, List[str]] = None,
-            check: bool = False,
-            no_color: bool = True,
-            list: bool = None,
-            write: bool = None,
-            diff: bool = None,
-            check_input: bool = None,
-            recursive: bool = None,
-            **options,
+        self,
+        dir: Union[str, List[str]] = None,
+        check: bool = False,
+        no_color: bool = True,
+        list: bool = None,
+        write: bool = None,
+        diff: bool = None,
+        check_input: bool = None,
+        recursive: bool = None,
+        **options,
     ) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/fmt
 
@@ -656,16 +673,18 @@ class TerraformCommand:
                 args = [dir]
         else:
             args = None
-        retcode, stdout, stderr = self.run('fmt', args, options=options, chdir=self.cwd, check=check)
+        retcode, stdout, stderr = self.run(
+            "fmt", args, options=options, chdir=self.cwd, check=check
+        )
         return CommandResult(retcode, stdout, stderr, json=False)
 
     def force_unlock(
-            self,
-            lock_id: str,
-            check: bool = False,
-            no_color: bool = True,
-            force: bool = True,
-            **options,
+        self,
+        lock_id: str,
+        check: bool = False,
+        no_color: bool = True,
+        force: bool = True,
+        **options,
     ) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/force-unlock
 
@@ -687,16 +706,18 @@ class TerraformCommand:
             force=flag(force),
         )
         args = [lock_id]
-        retcode, stdout, stderr = self.run('force-unlock', args, options=options, chdir=self.cwd, check=check)
+        retcode, stdout, stderr = self.run(
+            "force-unlock", args, options=options, chdir=self.cwd, check=check
+        )
         return CommandResult(retcode, stdout, stderr, json=False)
 
     def get(
-            self,
-            check: bool = False,
-            no_color: bool = True,
-            update: bool = None,
-            test_directory: str = None,
-            **options,
+        self,
+        check: bool = False,
+        no_color: bool = True,
+        update: bool = None,
+        test_directory: str = None,
+        **options,
     ) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/get
 
@@ -724,17 +745,19 @@ class TerraformCommand:
             update=flag(update),
             test_directory=test_directory,
         )
-        retcode, stdout, stderr = self.run('get', options=options, chdir=self.cwd, check=check)
+        retcode, stdout, stderr = self.run(
+            "get", options=options, chdir=self.cwd, check=check
+        )
         return CommandResult(retcode, stdout, stderr, json=False)
 
     def graph(
-            self,
-            check: bool = False,
-            no_color: bool = True,
-            plan: str = None,
-            draw_cycles: bool = None,
-            type: str = None,
-            **options,
+        self,
+        check: bool = False,
+        no_color: bool = True,
+        plan: str = None,
+        draw_cycles: bool = None,
+        type: str = None,
+        **options,
     ) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/graph
 
@@ -773,23 +796,25 @@ class TerraformCommand:
             draw_cycles=flag(draw_cycles),
             type=type,
         )
-        retcode, stdout, stderr = self.run('graph', options=options, chdir=self.cwd, check=check)
+        retcode, stdout, stderr = self.run(
+            "graph", options=options, chdir=self.cwd, check=check
+        )
         return CommandResult(retcode, stdout, stderr, json=False)
 
     def import_resource(
-            self,
-            addr: str,
-            id: str,
-            check: bool = False,
-            config: str = None,
-            input: bool = False,
-            lock: bool = None,
-            lock_timeout: str = None,
-            no_color: bool = True,
-            vars: dict = None,
-            var_files: List[str] = None,
-            ignore_remote_version: bool = None,
-            **options,
+        self,
+        addr: str,
+        id: str,
+        check: bool = False,
+        config: str = None,
+        input: bool = False,
+        lock: bool = None,
+        lock_timeout: str = None,
+        no_color: bool = True,
+        vars: dict = None,
+        var_files: List[str] = None,
+        ignore_remote_version: bool = None,
+        **options,
     ) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/import
 
@@ -851,18 +876,20 @@ class TerraformCommand:
             ignore_remote_version=flag(ignore_remote_version),
         )
         args = [addr, id]
-        retcode, stdout, stderr = self.run('import', args, options=options, chdir=self.cwd, check=check)
+        retcode, stdout, stderr = self.run(
+            "import", args, options=options, chdir=self.cwd, check=check
+        )
         return CommandResult(retcode, stdout, stderr, json=False)
 
     def output(
-            self,
-            name: str = None,
-            check: bool = False,
-            json: bool = True,
-            no_color: bool = True,
-            state: str = None,
-            raw: bool = None,
-            **options,
+        self,
+        name: str = None,
+        check: bool = False,
+        json: bool = True,
+        no_color: bool = True,
+        state: str = None,
+        raw: bool = None,
+        **options,
     ) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/output
 
@@ -888,19 +915,21 @@ class TerraformCommand:
             raw=flag(raw),
         )
         args = [name] if name else None
-        retcode, stdout, stderr = self.run('output', args, options=options, chdir=self.cwd, check=check, json=json)
+        retcode, stdout, stderr = self.run(
+            "output", args, options=options, chdir=self.cwd, check=check, json=json
+        )
         value = json_loads(stdout) if json else stdout
         return CommandResult(retcode, value, stderr, json=json)
 
     def providers(
-            self,
-            subcmd: str = None,
-            args: Sequence[str] = None,
-            check: bool = False,
-            no_color: bool = True,
-            json: bool = False,
-            test_directory: str = None,
-            **options,
+        self,
+        subcmd: str = None,
+        args: Sequence[str] = None,
+        check: bool = False,
+        no_color: bool = True,
+        json: bool = False,
+        test_directory: str = None,
+        **options,
     ) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/providers
 
@@ -923,23 +952,25 @@ class TerraformCommand:
             no_color=flag(no_color),
             test_directory=test_directory,
         )
-        cmd = ['providers']
+        cmd = ["providers"]
         if subcmd:
             cmd.append(subcmd)
-        retcode, stdout, stderr = self.run(cmd, args=args, options=options, chdir=self.cwd, check=check, json=json)
+        retcode, stdout, stderr = self.run(
+            cmd, args=args, options=options, chdir=self.cwd, check=check, json=json
+        )
         value = json_loads(stdout) if json else stdout
         return CommandResult(retcode, value, stderr, json=json)
 
     def providers_lock(
-            self,
-            *providers,
-            check: bool = False,
-            no_color: bool = True,
-            fs_mirror: str = None,
-            net_mirror: str = None,
-            platform: Union[str, List[str]] = None,
-            enable_plugin_cache: bool = False,
-            **options,
+        self,
+        *providers,
+        check: bool = False,
+        no_color: bool = True,
+        fs_mirror: str = None,
+        net_mirror: str = None,
+        platform: Union[str, List[str]] = None,
+        enable_plugin_cache: bool = False,
+        **options,
     ) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/providers/lock
 
@@ -993,15 +1024,17 @@ class TerraformCommand:
             platform=platform,
             enable_plugin_cache=flag(enable_plugin_cache),
         )
-        return self.providers(subcmd='lock', args=providers, check=check, no_color=no_color, **options)
+        return self.providers(
+            subcmd="lock", args=providers, check=check, no_color=no_color, **options
+        )
 
     def providers_mirror(
-            self,
-            target_dir: str,
-            check: bool = False,
-            no_color: bool = True,
-            platform: Union[str, List[str]] = None,
-            **options,
+        self,
+        target_dir: str,
+        check: bool = False,
+        no_color: bool = True,
+        platform: Union[str, List[str]] = None,
+        **options,
     ) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/providers/mirror
 
@@ -1032,13 +1065,15 @@ class TerraformCommand:
             platform=platform,
         )
         args = [target_dir]
-        return self.providers(subcmd='mirror', args=args, check=check, no_color=no_color, **options)
+        return self.providers(
+            subcmd="mirror", args=args, check=check, no_color=no_color, **options
+        )
 
     def providers_schema(
-            self,
-            check: bool = False,
-            no_color: bool = True,
-            **options,
+        self,
+        check: bool = False,
+        no_color: bool = True,
+        **options,
     ) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/providers
 
@@ -1049,22 +1084,24 @@ class TerraformCommand:
         :param no_color: True to output not contain any color.
         :param options: More command options.
         """
-        return self.providers(subcmd='schema', check=check, no_color=no_color, json=True, **options)
+        return self.providers(
+            subcmd="schema", check=check, no_color=no_color, json=True, **options
+        )
 
     def refresh(
-            self,
-            check: bool = False,
-            json: bool = True,
-            target: Union[str, List[str]] = None,
-            vars: dict = None,
-            var_files: List[str] = None,
-            compact_warnings: bool = None,
-            input: bool = False,
-            lock: bool = None,
-            lock_timeout: str = None,
-            no_color: bool = True,
-            parallelism: int = None,
-            **options,
+        self,
+        check: bool = False,
+        json: bool = True,
+        target: Union[str, List[str]] = None,
+        vars: dict = None,
+        var_files: List[str] = None,
+        compact_warnings: bool = None,
+        input: bool = False,
+        lock: bool = None,
+        lock_timeout: str = None,
+        no_color: bool = True,
+        parallelism: int = None,
+        **options,
     ) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/refresh
 
@@ -1106,18 +1143,20 @@ class TerraformCommand:
             no_color=flag(no_color),
             parallelism=parallelism,
         )
-        retcode, stdout, stderr = self.run('refresh', options=options, chdir=self.cwd, check=check, json=json)
+        retcode, stdout, stderr = self.run(
+            "refresh", options=options, chdir=self.cwd, check=check, json=json
+        )
         value = json_loads(stdout, split=True) if json else stdout
         return CommandResult(retcode, value, stderr, json=json)
 
     def state(
-            self,
-            subcmd: str,
-            args: Sequence[str] = None,
-            check: bool = False,
-            no_color: bool = True,
-            json: bool = False,
-            **options,
+        self,
+        subcmd: str,
+        args: Sequence[str] = None,
+        check: bool = False,
+        no_color: bool = True,
+        json: bool = False,
+        **options,
     ) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/state
 
@@ -1142,19 +1181,21 @@ class TerraformCommand:
         options.update(
             no_color=flag(no_color),
         )
-        cmd = ['state', subcmd]
-        retcode, stdout, stderr = self.run(cmd, args=args, options=options, chdir=self.cwd, check=check, json=json)
+        cmd = ["state", subcmd]
+        retcode, stdout, stderr = self.run(
+            cmd, args=args, options=options, chdir=self.cwd, check=check, json=json
+        )
         value = json_loads(stdout) if json else stdout
         return CommandResult(retcode, value, stderr, json=json)
 
     def state_list(
-            self,
-            *addrs,
-            check: bool = False,
-            no_color: bool = True,
-            state: str = None,
-            ids: Sequence[str] = None,
-            **options,
+        self,
+        *addrs,
+        check: bool = False,
+        no_color: bool = True,
+        state: str = None,
+        ids: Sequence[str] = None,
+        **options,
     ):
         """Refer to https://www.terraform.io/docs/commands/state/list
 
@@ -1181,22 +1222,22 @@ class TerraformCommand:
             the given ids.
         :param options: More command options.
         """
-        options.update(
-            id=ids
+        options.update(id=ids)
+        return self.state(
+            "list", args=addrs, check=check, no_color=no_color, state=state, **options
         )
-        return self.state('list', args=addrs, check=check, no_color=no_color, state=state, **options)
 
     def state_mv(
-            self,
-            src: str,
-            dst: str,
-            check: bool = False,
-            no_color: bool = True,
-            dry_run: bool = None,
-            lock: bool = None,
-            lock_timeout: str = None,
-            ignore_remote_version: bool = None,
-            **options,
+        self,
+        src: str,
+        dst: str,
+        check: bool = False,
+        no_color: bool = True,
+        dry_run: bool = None,
+        lock: bool = None,
+        lock_timeout: str = None,
+        ignore_remote_version: bool = None,
+        **options,
     ):
         """Refer to https://www.terraform.io/docs/commands/state/mv
 
@@ -1236,13 +1277,15 @@ class TerraformCommand:
             lock_timeout=lock_timeout,
             ignore_remote_version=flag(ignore_remote_version),
         )
-        return self.state('mv', args=[src, dst], check=check, no_color=no_color, **options)
+        return self.state(
+            "mv", args=[src, dst], check=check, no_color=no_color, **options
+        )
 
     def state_pull(
-            self,
-            check: bool = False,
-            no_color: bool = True,
-            **options,
+        self,
+        check: bool = False,
+        no_color: bool = True,
+        **options,
     ):
         """Refer to https://www.terraform.io/docs/commands/state/pull
 
@@ -1260,21 +1303,23 @@ class TerraformCommand:
         options.update(
             no_color=flag(no_color),
         )
-        cmd = ['state', 'pull']
-        retcode, stdout, stderr = self.run(cmd, options=options, chdir=self.cwd, check=check)
+        cmd = ["state", "pull"]
+        retcode, stdout, stderr = self.run(
+            cmd, options=options, chdir=self.cwd, check=check
+        )
         json = retcode == 0
         value = json_loads(stdout) if json else stdout
         return CommandResult(retcode, value, stderr, json=json)
 
     def state_push(
-            self,
-            path: str,
-            check: bool = False,
-            no_color: bool = True,
-            force: bool = None,
-            lock: bool = None,
-            lock_timeout: str = None,
-            **options,
+        self,
+        path: str,
+        check: bool = False,
+        no_color: bool = True,
+        force: bool = None,
+        lock: bool = None,
+        lock_timeout: str = None,
+        **options,
     ):
         """Refer to https://www.terraform.io/docs/commands/state/push
 
@@ -1305,19 +1350,21 @@ class TerraformCommand:
             lock=lock,
             lock_timeout=lock_timeout,
         )
-        return self.state('push', args=[path], check=check, no_color=no_color, **options)
+        return self.state(
+            "push", args=[path], check=check, no_color=no_color, **options
+        )
 
     def state_replace_provider(
-            self,
-            from_provider: str,
-            to_provider: str,
-            check: bool = False,
-            no_color: bool = True,
-            auto_approve: bool = True,
-            lock: bool = None,
-            lock_timeout: str = None,
-            ignore_remote_version: bool = None,
-            **options,
+        self,
+        from_provider: str,
+        to_provider: str,
+        check: bool = False,
+        no_color: bool = True,
+        auto_approve: bool = True,
+        lock: bool = None,
+        lock_timeout: str = None,
+        ignore_remote_version: bool = None,
+        **options,
     ):
         """Refer to https://www.terraform.io/cli/commands/state/replace-provider
 
@@ -1342,21 +1389,26 @@ class TerraformCommand:
             auto_approve=flag(auto_approve),
             ignore_remote_version=flag(ignore_remote_version),
         )
-        return self.state('replace-provider', args=[from_provider, to_provider],
-                          check=check, no_color=no_color, **options)
+        return self.state(
+            "replace-provider",
+            args=[from_provider, to_provider],
+            check=check,
+            no_color=no_color,
+            **options,
+        )
 
     def state_rm(
-            self,
-            *addrs,
-            check: bool = False,
-            no_color: bool = True,
-            dry_run: bool = None,
-            backup: str = None,
-            lock: bool = None,
-            lock_timeout: str = None,
-            state: str = None,
-            ignore_remote_version: bool = None,
-            **options,
+        self,
+        *addrs,
+        check: bool = False,
+        no_color: bool = True,
+        dry_run: bool = None,
+        backup: str = None,
+        lock: bool = None,
+        lock_timeout: str = None,
+        state: str = None,
+        ignore_remote_version: bool = None,
+        **options,
     ):
         """Refer to https://www.terraform.io/cli/commands/state/rm
 
@@ -1398,15 +1450,15 @@ class TerraformCommand:
             state=state,
             ignore_remote_version=flag(ignore_remote_version),
         )
-        return self.state('rm', args=addrs, check=check, no_color=no_color, **options)
+        return self.state("rm", args=addrs, check=check, no_color=no_color, **options)
 
     def state_show(
-            self,
-            addr: str,
-            check: bool = False,
-            no_color: bool = True,
-            state: str = None,
-            **options,
+        self,
+        addr: str,
+        check: bool = False,
+        no_color: bool = True,
+        state: str = None,
+        **options,
     ):
         """Refer to https://www.terraform.io/cli/commands/state/show
 
@@ -1426,18 +1478,20 @@ class TerraformCommand:
         options.update(
             state=state,
         )
-        return self.state('show', args=[addr], check=check, no_color=no_color, **options)
+        return self.state(
+            "show", args=[addr], check=check, no_color=no_color, **options
+        )
 
     def taint(
-            self,
-            addr: str,
-            check: bool = False,
-            no_color: bool = True,
-            allow_missing_config: bool = None,
-            lock: bool = None,
-            lock_timeout: str = None,
-            ignore_remote_version: bool = None,
-            **options,
+        self,
+        addr: str,
+        check: bool = False,
+        no_color: bool = True,
+        allow_missing_config: bool = None,
+        lock: bool = None,
+        lock_timeout: str = None,
+        ignore_remote_version: bool = None,
+        **options,
     ):
         """Refer to https://www.terraform.io/cli/commands/taint
 
@@ -1482,19 +1536,21 @@ class TerraformCommand:
             lock_timeout=lock_timeout,
             ignore_remote_version=flag(ignore_remote_version),
         )
-        retcode, stdout, stderr = self.run('taint', args=[addr], options=options, chdir=self.cwd, check=check)
+        retcode, stdout, stderr = self.run(
+            "taint", args=[addr], options=options, chdir=self.cwd, check=check
+        )
         return CommandResult(retcode, stdout, stderr)
 
     def untaint(
-            self,
-            addr: str,
-            check: bool = False,
-            no_color: bool = True,
-            allow_missing_config: bool = None,
-            lock: bool = None,
-            lock_timeout: str = None,
-            ignore_remote_version: bool = None,
-            **options,
+        self,
+        addr: str,
+        check: bool = False,
+        no_color: bool = True,
+        allow_missing_config: bool = None,
+        lock: bool = None,
+        lock_timeout: str = None,
+        ignore_remote_version: bool = None,
+        **options,
     ):
         """Refer to https://www.terraform.io/cli/commands/untaint
 
@@ -1530,21 +1586,23 @@ class TerraformCommand:
             lock_timeout=lock_timeout,
             ignore_remote_version=flag(ignore_remote_version),
         )
-        retcode, stdout, stderr = self.run('untaint', args=[addr], options=options, chdir=self.cwd, check=check)
+        retcode, stdout, stderr = self.run(
+            "untaint", args=[addr], options=options, chdir=self.cwd, check=check
+        )
         return CommandResult(retcode, stdout, stderr)
 
     def test(
-            self,
-            check: bool = False,
-            vars: dict = None,
-            var_files: List[str] = None,
-            no_color: bool = True,
-            cloud_run: str = None,
-            filter: Union[str, List[str]] = None,
-            json: bool = True,
-            test_directory: str = None,
-            verbose: bool = None,
-            **options,
+        self,
+        check: bool = False,
+        vars: dict = None,
+        var_files: List[str] = None,
+        no_color: bool = True,
+        cloud_run: str = None,
+        filter: Union[str, List[str]] = None,
+        json: bool = True,
+        test_directory: str = None,
+        verbose: bool = None,
+        **options,
     ):
         """Refer to https://www.terraform.io/cli/commands/test
 
@@ -1589,17 +1647,19 @@ class TerraformCommand:
             test_directory=test_directory,
             verbose=flag(verbose),
         )
-        retcode, stdout, stderr = self.run('test', options=options, chdir=self.cwd, check=check, json=json)
+        retcode, stdout, stderr = self.run(
+            "test", options=options, chdir=self.cwd, check=check, json=json
+        )
         value = json_loads(stdout, split=True) if json else stdout
         return CommandResult(retcode, value, stderr, json=json)
 
     def workspace(
-            self,
-            subcmd: str,
-            args: Sequence[str] = None,
-            check: bool = False,
-            no_color: bool = True,
-            **options,
+        self,
+        subcmd: str,
+        args: Sequence[str] = None,
+        check: bool = False,
+        no_color: bool = True,
+        **options,
     ) -> CommandResult:
         """Refer to https://www.terraform.io/docs/commands/workspace
 
@@ -1614,19 +1674,21 @@ class TerraformCommand:
         options.update(
             no_color=flag(no_color),
         )
-        cmd = ['workspace', subcmd]
-        retcode, stdout, stderr = self.run(cmd, args=args, options=options, chdir=self.cwd, check=check)
+        cmd = ["workspace", subcmd]
+        retcode, stdout, stderr = self.run(
+            cmd, args=args, options=options, chdir=self.cwd, check=check
+        )
         return CommandResult(retcode, stdout, stderr)
 
     def workspace_new(
-            self,
-            name: str,
-            check: bool = False,
-            no_color: bool = True,
-            lock: bool = None,
-            lock_timeout: str = None,
-            state: str = None,
-            **options,
+        self,
+        name: str,
+        check: bool = False,
+        no_color: bool = True,
+        lock: bool = None,
+        lock_timeout: str = None,
+        state: str = None,
+        **options,
     ):
         """Refer to https://www.terraform.io/docs/commands/workspace/new
 
@@ -1646,13 +1708,15 @@ class TerraformCommand:
             lock=lock,
             lock_timeout=lock_timeout,
         )
-        return self.workspace('new', args=[name], check=check, no_color=no_color, state=state, **options)
+        return self.workspace(
+            "new", args=[name], check=check, no_color=no_color, state=state, **options
+        )
 
     def workspace_list(
-            self,
-            check: bool = False,
-            no_color: bool = True,
-            **options,
+        self,
+        check: bool = False,
+        no_color: bool = True,
+        **options,
     ):
         """Refer to https://www.terraform.io/docs/commands/workspace/list
 
@@ -1662,13 +1726,13 @@ class TerraformCommand:
         :param no_color: True to output not contain any color.
         :param options: More command options.
         """
-        return self.workspace('list', check=check, no_color=no_color, **options)
+        return self.workspace("list", check=check, no_color=no_color, **options)
 
     def workspace_show(
-            self,
-            check: bool = False,
-            no_color: bool = True,
-            **options,
+        self,
+        check: bool = False,
+        no_color: bool = True,
+        **options,
     ):
         """Refer to https://www.terraform.io/docs/commands/workspace/show
 
@@ -1678,14 +1742,14 @@ class TerraformCommand:
         :param no_color: True to output not contain any color.
         :param options: More command options.
         """
-        return self.workspace('show', check=check, no_color=no_color, **options)
+        return self.workspace("show", check=check, no_color=no_color, **options)
 
     def workspace_select(
-            self,
-            name: str,
-            check: bool = False,
-            no_color: bool = True,
-            **options,
+        self,
+        name: str,
+        check: bool = False,
+        no_color: bool = True,
+        **options,
     ):
         """Refer to https://www.terraform.io/docs/commands/workspace/select
 
@@ -1696,17 +1760,19 @@ class TerraformCommand:
         :param no_color: True to output not contain any color.
         :param options: More command options.
         """
-        return self.workspace('select', args=[name], check=check, no_color=no_color, **options)
+        return self.workspace(
+            "select", args=[name], check=check, no_color=no_color, **options
+        )
 
     def workspace_delete(
-            self,
-            name: str,
-            check: bool = False,
-            no_color: bool = True,
-            force: bool = None,
-            lock: bool = None,
-            lock_timeout: str = None,
-            **options,
+        self,
+        name: str,
+        check: bool = False,
+        no_color: bool = True,
+        force: bool = None,
+        lock: bool = None,
+        lock_timeout: str = None,
+        **options,
     ):
         """Refer to https://www.terraform.io/docs/commands/workspace/delete
 
@@ -1727,4 +1793,6 @@ class TerraformCommand:
             lock=lock,
             lock_timeout=lock_timeout,
         )
-        return self.workspace('delete', args=[name], check=check, no_color=no_color, **options)
+        return self.workspace(
+            "delete", args=[name], check=check, no_color=no_color, **options
+        )
