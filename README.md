@@ -101,7 +101,7 @@ dict_keys(['time_sleep.wait1', 'time_sleep.wait2'])
 If you want to develop this library, should first prepare the following environments:
 
 - [GoLang](https://go.dev/dl/) (Version 1.21.5+)
-- [Python](https://www.python.org/downloads/) (Version 3.7~3.12)
+- [Python](https://www.python.org/downloads/) (Version 3.9~3.14)
 - GCC
 
 Then, initialize git submodule:
@@ -111,17 +111,17 @@ $ git submodule init
 $ git submodule update
 ```
 
-`pip install` necessary tools:
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) and sync dependencies:
 
 ```bash
-$ pip install poetry pytest
+$ uv sync
 ```
 
 Now, we can build and test:
 
 ```bash
-$ poetry build -f wheel
-$ pytest
+$ uv build --wheel
+$ uv run pytest
 ```
 
 ## Why use this library?

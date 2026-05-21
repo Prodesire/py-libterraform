@@ -1,7 +1,7 @@
 # Env
 export PYTHONDONTWRITEBYTECODE=1
 TEST_PATH=./tests
-PY3=python3
+UV_PYTHON_FLAG=$(if $(PY),--python $(PY),)
 
 help:
 	@echo "\033[32minit\033[0m"
@@ -20,32 +20,16 @@ help:
 	@echo "    Remove build artifacts."
 
 init:
-	$(PY3) -m pip install poetry pytest
+	uv sync $(UV_PYTHON_FLAG)
 
 test: clean-pyc
-	$(PY3) -m pytest --color=yes $(TEST_PATH)
+	uv run $(UV_PYTHON_FLAG) pytest --color=yes $(TEST_PATH)
 
 build:
-	$(PY3) -m poetry build -f wheel
-
-build-all:
-	$(PY3) -m poetry env use python3.7
-	$(PY3) -m poetry build -f wheel
-	$(PY3) -m poetry env use python3.8
-	$(PY3) -m poetry build -f wheel
-	$(PY3) -m poetry env use python3.9
-	$(PY3) -m poetry build -f wheel
-	$(PY3) -m poetry env use python3.10
-	$(PY3) -m poetry build -f wheel
-	$(PY3) -m poetry env use python3.11
-	$(PY3) -m poetry build -f wheel
-	$(PY3) -m poetry env use python3.12
-	$(PY3) -m poetry build -f wheel
-	rename 's/-macosx_\d+_/-macosx_12_/' dist/*-macosx_*.whl
-
+	uv build --wheel $(UV_PYTHON_FLAG)
 
 publish:
-	$(PY3) -m poetry publish
+	uv publish
 
 clean: clean-pyc clean-build
 
@@ -60,5 +44,5 @@ clean-build:
 	find . -name '*.h' -exec rm -f {} +
 
 format:
-	$(PY3) -m poetry run isort libterraform tests
-	$(PY3) -m poetry run ruff format libterraform tests
+	uv run ruff check --fix libterraform tests
+	uv run ruff format libterraform tests

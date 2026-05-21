@@ -6,60 +6,29 @@ jobs:
   test:
     strategy:
       matrix:
-        os: [ ubuntu-20.04, windows-2019, macos-12 ]
-        python-version: [ '3.7.9', '3.8.10', '3.9.13', '3.10.11', '3.11.9', '3.12.4' ]
+        os: [ ubuntu-22.04, windows-2022, macos-14 ]
+        python-version: [ '3.9', '3.10', '3.11', '3.12', '3.13', '3.14' ]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Check out repository code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Set up GoLang
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: '^1.21.5'
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install poetry pytest
-        run: |
-          python -m pip install poetry pytest
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
       - name: Fetch terraform repository
         run: |
           git submodule init
           git submodule update
       - name: Build distributions
         run: |
-          poetry build -f wheel -vvv
+          uv build --wheel
       - name: Run tests
         run: |
-          pytest
-  test-macos-arm64:
-    strategy:
-      matrix:
-        os: [ macos-latest ]
-        python-version: [ '3.8.10', '3.9.13', '3.10.11', '3.11.9', '3.12.4' ]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Check out repository code
-        uses: actions/checkout@v2
-      - name: Set up GoLang
-        uses: actions/setup-go@v4
-        with:
-          go-version: '^1.21.5'
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install poetry pytest
-        run: |
-          python -m pip install poetry pytest
-      - name: Fetch terraform repository
-        run: |
-          git submodule init
-          git submodule update
-      - name: Build distributions
-        run: |
-          poetry build -f wheel -vvv
-      - name: Run tests
-        run: |
-          pytest
+          uv run pytest

@@ -1,47 +1,45 @@
-[tool.poetry]
+[project]
 name = "libterraform"
-version = "0.8.0"
+version = "0.8.1"
 description = "Python binding for Terraform."
-authors = ["Prodesire <wangbinxin001@126.com>"]
-license = "MIT"
+authors = [{ name = "Prodesire", email = "wangbinxin001@126.com" }]
+license = { text = "MIT" }
 readme = "README.md"
-homepage = "https://github.com/Prodesire/py-libterraform"
-repository = "https://github.com/Prodesire/py-libterraform"
+requires-python = ">=3.9"
 keywords = ["libterraform", "terraform"]
 classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Libraries",
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: POSIX",
     "Operating System :: POSIX :: BSD",
     "Operating System :: POSIX :: Linux",
-    "Operating System :: Microsoft :: Windows"
+    "Operating System :: Microsoft :: Windows",
 ]
-packages = [
-    { include = "libterraform/*" },
-]
-include = ["libterraform/libterraform.so", "libterraform/libterraform.dll"]
 
-[tool.poetry.dependencies]
-python = "^3.7"
+[project.urls]
+Homepage = "https://github.com/Prodesire/py-libterraform"
+Repository = "https://github.com/Prodesire/py-libterraform"
 
-[tool.poetry.build]
-generate-setup-file = false
-script = "build.py"
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^7.0.1"
-ruff = "^0.5.2"
+[dependency-groups]
+dev = ["pytest>=7.0.1", "ruff>=0.5.2"]
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+packages = ["libterraform"]
+artifacts = ["libterraform/libterraform.so", "libterraform/libterraform.dll"]
+
+[tool.hatch.build.hooks.custom]
+path = "hatch_build.py"
