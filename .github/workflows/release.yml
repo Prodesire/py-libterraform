@@ -32,6 +32,12 @@ jobs:
       - name: Build distributions
         run: |
           uv build --wheel
+      - name: Fix linux wheel tag
+        if: runner.os == 'Linux'
+        run: |
+          for f in dist/*-linux_*.whl; do
+            mv "$f" "$(echo $f | sed 's/linux_/manylinux_2_35_/')"
+          done
       - name: Upload distribution artifacts
         uses: actions/upload-artifact@v5
         with:
@@ -95,4 +101,4 @@ jobs:
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
         run: |
-          uv publish dist/*
+          uv publish --check-url https://pypi.org/simple/ dist/*
