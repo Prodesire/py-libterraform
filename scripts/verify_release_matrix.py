@@ -14,12 +14,35 @@ def load_matrix(path):
         return json.load(f)
 
 
-def read_project_version(path):
+def read_package_version(path):
     content = Path(path).read_text(encoding="utf-8")
-    match = re.search(r'^version\s*=\s*"([^"]+)"', content, re.MULTILINE)
+    match = re.search(r'^__version__\s*=\s*"([^"]+)"', content, re.MULTILINE)
     if match is None:
-        raise RuntimeError(f"Cannot find project version in {path}")
+        raise RuntimeError(f"Cannot find package version in {path}")
     return match.group(1)
+
+
+def read_project_version(path):
+    project_path = Path(path)
+    content = project_path.read_text(encoding="utf-8")
+    if 'dynamic = ["version"]' not in content:
+        raise RuntimeError(f"Project version in {path} must be dynamic")
+
+    section_match = re.search(
+        r"(?ms)^\[tool\.hatch\.version\]\s*(?P<body>.*?)(?:^\[|\Z)",
+        content,
+    )
+    if section_match is None:
+        raise RuntimeError(f"Cannot find [tool.hatch.version] in {path}")
+    path_match = re.search(
+        r'^path\s*=\s*"([^"]+)"',
+        section_match.group("body"),
+        re.MULTILINE,
+    )
+    if path_match is None:
+        raise RuntimeError(f"Cannot find Hatch version path in {path}")
+
+    return read_package_version(project_path.parent / path_match.group(1))
 
 
 def read_terraform_version(path):
@@ -78,11 +101,11 @@ def verify(root):
     if entry["libterraform_version"] != project_version:
         errors.append(
             "Current matrix entry version "
-            f"{entry['libterraform_version']} does not match pyproject {project_version}"
+            f"{entry['libterraform_version']} does not match package {project_version}"
         )
 
     terraform_version = read_terraform_version(
-        root / "vendor" / "terraform" / "version" / "VERSION"
+        root / "upstream" / "terraform" / "version" / "VERSION"
     )
     if entry["terraform_version"] != terraform_version:
         errors.append(
@@ -91,14 +114,14 @@ def verify(root):
         )
 
     go_plugin_version = read_required_module_version(
-        root / "vendor" / "terraform" / "go.mod",
+        root / "upstream" / "terraform" / "go.mod",
         "github.com/hashicorp/go-plugin",
     ).removeprefix("v")
     if entry["go_plugin_version"] != go_plugin_version:
         errors.append(
             "Current matrix entry go-plugin version "
             f"{entry['go_plugin_version']} does not match "
-            f"vendor/terraform/go.mod {go_plugin_version}"
+            f"upstream/terraform/go.mod {go_plugin_version}"
         )
 
     return errors

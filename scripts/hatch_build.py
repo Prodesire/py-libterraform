@@ -13,8 +13,15 @@ def repository_root():
 
 def submodule_paths(root):
     return (
-        os.path.join(root, "vendor", "terraform"),
-        os.path.join(root, "vendor", "go-plugin"),
+        os.path.join(root, "upstream", "terraform"),
+        os.path.join(root, "upstream", "go-plugin"),
+    )
+
+
+def native_go_source_paths(root):
+    return (
+        os.path.join(root, "native", "go", "libterraform.go"),
+        os.path.join(root, "native", "go", "plugin_patch.go"),
     )
 
 
@@ -26,7 +33,7 @@ def go_plugin_version_from_mod(mod_content):
     )
     if match is None:
         raise RuntimeError(
-            "Cannot find github.com/hashicorp/go-plugin in vendor/terraform/go.mod"
+            "Cannot find github.com/hashicorp/go-plugin in upstream/terraform/go.mod"
         )
     return match.group(1)
 
@@ -56,13 +63,12 @@ class CustomBuildHook(BuildHookInterface):
             "libterraform.dll" if platform.system() == "Windows" else "libterraform.so"
         )
         header_filename = "libterraform.h"
-        tf_filename = "libterraform.go"
         root = repository_root()
         terraform_dirname, plugin_dirname = submodule_paths(root)
-        tf_path = os.path.join(root, tf_filename)
+        tf_path, plugin_patch_path = native_go_source_paths(root)
+        tf_filename = os.path.basename(tf_path)
         tf_package_name = "github.com/hashicorp/terraform"
-        plugin_patch_filename = "plugin_patch.go"
-        plugin_patch_path = os.path.join(root, plugin_patch_filename)
+        plugin_patch_filename = os.path.basename(plugin_patch_path)
 
         if not os.path.exists(os.path.join(terraform_dirname, ".git")):
             raise RuntimeError(
@@ -115,7 +121,10 @@ class CustomBuildHook(BuildHookInterface):
                 cwd=terraform_dirname,
                 env=env,
             )
-            shutil.move(lib_path, os.path.join(root, "libterraform", lib_filename))
+            shutil.move(
+                lib_path,
+                os.path.join(root, "src", "libterraform", lib_filename),
+            )
         finally:
             for path in (
                 target_plugin_patch_path,

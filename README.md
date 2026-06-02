@@ -112,7 +112,7 @@ $ git submodule init
 $ git submodule update
 ```
 
-Terraform and go-plugin are checked out under `vendor/`.
+Terraform and go-plugin are checked out under `upstream/`.
 
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/) and sync dependencies:
 

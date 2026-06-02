@@ -2,7 +2,7 @@
 export PYTHONDONTWRITEBYTECODE=1
 TEST_PATH=./tests
 UV_PYTHON_FLAG=$(if $(PY),--python $(PY),)
-PYTHON_CHECK_PATHS=libterraform tests scripts
+PYTHON_CHECK_PATHS=src tests scripts
 GIT_HOOKS_PATH=scripts/git-hooks
 
 .PHONY: help install install-hooks test lint build publish clean clean-pyc clean-build format

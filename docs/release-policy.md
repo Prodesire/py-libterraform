@@ -45,11 +45,11 @@ For a release-branch-only fix, commit directly on that release branch, then cher
 Before tagging a release:
 
 1. Update `release-matrix.json`.
-2. Update `pyproject.toml`.
+2. Update `src/libterraform/__init__.py`.
 3. Update `tests/consts.py`.
 4. Update README examples and version table.
-5. Ensure `vendor/terraform/` points at the intended Terraform tag.
-6. Ensure `vendor/go-plugin/` points at the go-plugin version required by `vendor/terraform/go.mod`.
+5. Ensure `upstream/terraform/` points at the intended Terraform tag.
+6. Ensure `upstream/go-plugin/` points at the go-plugin version required by `upstream/terraform/go.mod`.
 7. Run:
 
 ```bash

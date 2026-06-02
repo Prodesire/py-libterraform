@@ -38,11 +38,12 @@ def test_test_workflow_runs_on_branch_pushes_but_not_tag_pushes():
     assert "      - '*'" in block
 
 
-def test_workflows_use_vendored_terraform_submodule_for_go_version():
+def test_workflows_use_upstream_terraform_submodule_for_go_version():
     for workflow_name in ("test.yml", "release.yml"):
         content = (ROOT / ".github" / "workflows" / workflow_name).read_text(
             encoding="utf-8"
         )
 
-        assert "go-version-file: vendor/terraform/go.mod" in content
+        assert "go-version-file: upstream/terraform/go.mod" in content
+        assert "go-version-file: vendor/terraform/go.mod" not in content
         assert "go-version-file: terraform/go.mod" not in content

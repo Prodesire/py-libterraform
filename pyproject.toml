@@ -1,6 +1,6 @@
 [project]
 name = "libterraform"
-version = "0.9.0"
+dynamic = ["version"]
 description = "Python binding for Terraform."
 authors = [{ name = "Prodesire", email = "wangbinxin001@126.com" }]
 license = { text = "MIT" }
@@ -46,8 +46,11 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build]
-packages = ["libterraform"]
-artifacts = ["libterraform/libterraform.so", "libterraform/libterraform.dll"]
+packages = ["src/libterraform"]
+artifacts = ["src/libterraform/libterraform.so", "src/libterraform/libterraform.dll"]
 
 [tool.hatch.build.hooks.custom]
 path = "scripts/hatch_build.py"
+
+[tool.hatch.version]
+path = "src/libterraform/__init__.py"

@@ -1,4 +1,5 @@
 import importlib.util
+import re
 from pathlib import Path
 
 
@@ -27,13 +28,29 @@ def test_current_release_matrix_matches_checked_out_repository():
     assert entry["libterraform_minor"] == verifier.minor_from_version(project_version)
     assert entry["libterraform_version"] == project_version
     assert entry["terraform_version"] == verifier.read_terraform_version(
-        ROOT / "vendor" / "terraform" / "version" / "VERSION"
+        ROOT / "upstream" / "terraform" / "version" / "VERSION"
     )
     assert entry["go_plugin_version"] == verifier.read_required_module_version(
-        ROOT / "vendor" / "terraform" / "go.mod",
+        ROOT / "upstream" / "terraform" / "go.mod",
         "github.com/hashicorp/go-plugin",
     ).removeprefix("v")
     assert entry["branch"] == f"release/{entry['libterraform_minor']}"
+
+
+def test_project_version_is_loaded_from_package_init():
+    verifier = load_verify_module()
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    package_init = (ROOT / "src" / "libterraform" / "__init__.py").read_text(
+        encoding="utf-8"
+    )
+    match = re.search(r'^__version__ = "([^"]+)"', package_init, re.MULTILINE)
+
+    assert re.search(r"^version\s*=", pyproject, re.MULTILINE) is None
+    assert 'dynamic = ["version"]' in pyproject
+    assert "[tool.hatch.version]" in pyproject
+    assert 'path = "src/libterraform/__init__.py"' in pyproject
+    assert match is not None
+    assert verifier.read_project_version(ROOT / "pyproject.toml") == match.group(1)
 
 
 def test_planned_release_lines_have_scoped_branches():
@@ -51,10 +68,11 @@ def test_planned_release_lines_have_scoped_branches():
         assert entry["maintenance"] in {"active", "passive", "planned"}
 
 
-def test_submodules_live_under_vendor():
+def test_submodules_live_under_upstream():
     gitmodules = (ROOT / ".gitmodules").read_text(encoding="utf-8")
 
-    assert "\tpath = vendor/terraform" in gitmodules
-    assert "\tpath = vendor/go-plugin" in gitmodules
+    assert "\tpath = upstream/terraform" in gitmodules
+    assert "\tpath = upstream/go-plugin" in gitmodules
+    assert not (ROOT / "vendor").exists()
     assert not (ROOT / "terraform").exists()
     assert not (ROOT / "go-plugin").exists()

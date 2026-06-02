@@ -23,11 +23,20 @@ def test_build_hook_resolves_repository_root_from_scripts_dir():
     assert Path(hatch_build.repository_root()) == ROOT
 
 
-def test_build_hook_uses_vendored_submodule_paths():
+def test_build_hook_uses_upstream_submodule_paths():
     terraform_dirname, plugin_dirname = hatch_build.submodule_paths(str(ROOT))
 
-    assert Path(terraform_dirname) == ROOT / "vendor" / "terraform"
-    assert Path(plugin_dirname) == ROOT / "vendor" / "go-plugin"
+    assert Path(terraform_dirname) == ROOT / "upstream" / "terraform"
+    assert Path(plugin_dirname) == ROOT / "upstream" / "go-plugin"
+
+
+def test_build_hook_uses_native_go_sources():
+    tf_path, plugin_patch_path = hatch_build.native_go_source_paths(str(ROOT))
+
+    assert Path(tf_path) == ROOT / "native" / "go" / "libterraform.go"
+    assert Path(plugin_patch_path) == ROOT / "native" / "go" / "plugin_patch.go"
+    assert not (ROOT / "libterraform.go").exists()
+    assert not (ROOT / "plugin_patch.go").exists()
 
 
 def test_go_plugin_version_from_mod_reads_required_module():

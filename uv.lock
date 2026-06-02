@@ -91,7 +91,6 @@ wheels = [
 
 [[package]]
 name = "libterraform"
-version = "0.9.0"
 source = { editable = "." }
 
 [package.dev-dependencies]
