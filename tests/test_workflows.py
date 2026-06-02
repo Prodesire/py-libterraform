@@ -47,3 +47,25 @@ def test_workflows_use_upstream_terraform_submodule_for_go_version():
         assert "go-version-file: upstream/terraform/go.mod" in content
         assert "go-version-file: vendor/terraform/go.mod" not in content
         assert "go-version-file: terraform/go.mod" not in content
+
+
+def test_release_workflow_runs_tests_before_publishing():
+    content = (ROOT / ".github" / "workflows" / "release.yml").read_text(
+        encoding="utf-8"
+    )
+    build_job = content.split("  build-macos-x64:", maxsplit=1)[0]
+    macos_x64_job = content.split("  build-macos-x64:", maxsplit=1)[1].split(
+        "  publish:",
+        maxsplit=1,
+    )[0]
+    publish_job = content.split("  publish:", maxsplit=1)[1]
+
+    assert (
+        "      - name: Run tests\n        run: |\n          uv run pytest\n"
+    ) in build_job
+    assert build_job.index("uv build --wheel") < build_job.index("uv run pytest")
+    assert build_job.index("uv run pytest") < build_job.index(
+        "Upload distribution artifacts"
+    )
+    assert "uv run pytest" not in macos_x64_job
+    assert "uv run pytest" not in publish_job

@@ -30,6 +30,9 @@ jobs:
       - name: Build distributions
         run: |
           uv build --wheel
+      - name: Run tests
+        run: |
+          uv run pytest
       - name: Fix linux wheel tag
         if: runner.os == 'Linux'
         run: |
