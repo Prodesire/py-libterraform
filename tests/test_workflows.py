@@ -69,3 +69,17 @@ def test_release_workflow_runs_tests_before_publishing():
     )
     assert "uv run pytest" not in macos_x64_job
     assert "uv run pytest" not in publish_job
+
+
+def test_release_workflow_retries_pypi_publish_three_times():
+    content = (ROOT / ".github" / "workflows" / "release.yml").read_text(
+        encoding="utf-8"
+    )
+    publish_job = content.split("  publish:", maxsplit=1)[1]
+
+    assert "for attempt in 1 2 3; do" in publish_job
+    assert "uv publish --check-url https://pypi.org/simple/ dist/* && exit 0" in (
+        publish_job
+    )
+    assert 'if [ "$attempt" -lt 3 ]; then' in publish_job
+    assert "exit 1" in publish_job
