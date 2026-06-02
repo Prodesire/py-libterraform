@@ -1,39 +1,76 @@
-*.dll
-*.exe
 .DS_Store
-bin/
 modules-dev/
-/pkg/
 website/.vagrant
 website/.bundle
 website/build
 website/node_modules
 website/vendor
 .vagrant/
-vendor/
+
+# Editors
+.idea/
+*.iml
+*.swp
+.*.swp
+*~
 *.backup
 *.bak
-*~
-.*.swp
-.idea
-*.iml
-*.test
-*.iml
-*.so
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.python-version
+.venv/
+venv/
+env/
+ENV/
+.env
+.env.*
+!.env.example
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyre/
+.pytype/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+pip-wheel-metadata/
+.ipynb_checkpoints/
+
+# Go
+bin/
+/pkg/
+*.exe
 *.dll
+*.so
+*.dylib
+*.a
+*.o
+*.test
+*.out
+*.prof
+coverage.out
+
 *.h
 t.*
 
-dist
-__pycache__
-.pytest_cache
-.python-version
+docs/superpowers/
 
 # Coverage
 coverage.txt
 
 # Terraform
-.terraform
+.terraform/
 .terraform.*
 *.tfplan
 *.tfstate

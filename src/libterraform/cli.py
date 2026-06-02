@@ -1,7 +1,7 @@
 import os
-from ctypes import *
+from ctypes import POINTER, c_char_p, c_int64
 from threading import Thread
-from typing import List, Sequence, Union
+from typing import List, Optional, Sequence, Tuple, Union
 
 from libterraform import _lib_tf
 from libterraform.common import WINDOWS, CmdType, json_loads
@@ -41,12 +41,12 @@ class TerraformCommand:
     def run(
         cls,
         cmd: CmdType,
-        args: Sequence[str] = None,
-        options: dict = None,
+        args: Optional[Sequence[str]] = None,
+        options: Optional[dict] = None,
         chdir=None,
         check: bool = False,
         json=False,
-    ) -> (int, str, str):
+    ) -> Tuple[int, str, str]:
         """
         Run command with args and return a tuple (retcode, stdout, stderr).
 

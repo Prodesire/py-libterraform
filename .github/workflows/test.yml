@@ -2,6 +2,8 @@ name: Run Tests
 
 on:
   push:
+    branches:
+      - '**'
     tags-ignore:
       - '*'
   pull_request:
@@ -11,25 +13,26 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-22.04, windows-2022, macos-14 ]
-        python-version: [ '3.9', '3.10', '3.11', '3.12', '3.13', '3.14' ]
+        python-version: [ '3.14' ]
+        include:
+          - os: ubuntu-22.04
+            python-version: '3.9'
     runs-on: ${{ matrix.os }}
     steps:
       - name: Check out repository code
         uses: actions/checkout@v5
+        with:
+          submodules: recursive
       - name: Set up GoLang
         uses: actions/setup-go@v6
         with:
-          go-version: '^1.21.5'
+          go-version-file: upstream/terraform/go.mod
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Set up uv
         uses: astral-sh/setup-uv@v6
-      - name: Fetch terraform repository
-        run: |
-          git submodule init
-          git submodule update
       - name: Build distributions
         run: |
           uv build --wheel

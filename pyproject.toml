@@ -1,6 +1,6 @@
 [project]
 name = "libterraform"
-version = "0.8.2"
+dynamic = ["version"]
 description = "Python binding for Terraform."
 authors = [{ name = "Prodesire", email = "wangbinxin001@126.com" }]
 license = { text = "MIT" }
@@ -31,15 +31,26 @@ Homepage = "https://github.com/Prodesire/py-libterraform"
 Repository = "https://github.com/Prodesire/py-libterraform"
 
 [dependency-groups]
-dev = ["pytest>=7.0.1", "ruff>=0.5.2"]
+dev = [
+    "hatchling>=1.27.0",
+    "pytest>=7.0.1",
+    "ruff>=0.5.2",
+    "ty>=0.0.42",
+]
+
+[tool.ty.rules]
+invalid-parameter-default = "ignore"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build]
-packages = ["libterraform"]
-artifacts = ["libterraform/libterraform.so", "libterraform/libterraform.dll"]
+packages = ["src/libterraform"]
+artifacts = ["src/libterraform/libterraform.so", "src/libterraform/libterraform.dll"]
 
 [tool.hatch.build.hooks.custom]
-path = "hatch_build.py"
+path = "scripts/hatch_build.py"
+
+[tool.hatch.version]
+path = "src/libterraform/__init__.py"
