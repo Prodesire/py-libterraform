@@ -1,9 +1,21 @@
 import os
 import platform
+import re
 import shutil
 import subprocess
 
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
+
+
+def go_plugin_version_from_mod(mod_content):
+    match = re.search(
+        r"^\s*github\.com/hashicorp/go-plugin\s+(v\S+)",
+        mod_content,
+        re.MULTILINE,
+    )
+    if match is None:
+        raise RuntimeError("Cannot find github.com/hashicorp/go-plugin in terraform/go.mod")
+    return match.group(1)
 
 
 class CustomBuildHook(BuildHookInterface):
@@ -45,10 +57,11 @@ class CustomBuildHook(BuildHookInterface):
         shutil.copyfile(plugin_patch_path, target_plugin_patch_path)
         with open(target_tf_mod_path) as f:
             mod_content = f.read()
+        plugin_version = go_plugin_version_from_mod(mod_content)
         with open(target_tf_mod_path, 'w') as f:
             modified_mod_content = (
                 f'{mod_content}\n'
-                f'replace github.com/hashicorp/go-plugin v1.4.3 => ../go-plugin'
+                f'replace github.com/hashicorp/go-plugin {plugin_version} => ../go-plugin'
             )
             f.write(modified_mod_content)
 

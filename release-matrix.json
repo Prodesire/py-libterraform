@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "policy": {
+    "branch_pattern": "release/{libterraform_minor}",
+    "tag_pattern": "v{libterraform_version}",
+    "active_maintenance_lines": 2,
+    "minor_line_rule": "A libterraform minor line adapts exactly one Terraform minor line; patch releases stay inside that Terraform minor line."
+  },
+  "releases": [
+    {
+      "libterraform_minor": "0.8",
+      "libterraform_version": "0.8.2",
+      "terraform_minor": "1.8",
+      "terraform_version": "1.8.4",
+      "go_plugin_version": "1.4.3",
+      "branch": "release/0.8",
+      "status": "released",
+      "maintenance": "passive"
+    },
+    {
+      "libterraform_minor": "0.9",
+      "libterraform_version": "0.9.0",
+      "terraform_minor": "1.9",
+      "terraform_version": "1.9.8",
+      "go_plugin_version": "1.6.0",
+      "branch": "release/0.9",
+      "status": "planned",
+      "maintenance": "planned"
+    },
+    {
+      "libterraform_minor": "0.10",
+      "libterraform_version": "0.10.0",
+      "terraform_minor": "1.10",
+      "terraform_version": "1.10.5",
+      "go_plugin_version": "1.6.0",
+      "branch": "release/0.10",
+      "status": "planned",
+      "maintenance": "planned"
+    },
+    {
+      "libterraform_minor": "0.11",
+      "libterraform_version": "0.11.0",
+      "terraform_minor": "1.11",
+      "terraform_version": "1.11.4",
+      "go_plugin_version": "1.6.0",
+      "branch": "release/0.11",
+      "status": "planned",
+      "maintenance": "planned"
+    },
+    {
+      "libterraform_minor": "0.12",
+      "libterraform_version": "0.12.0",
+      "terraform_minor": "1.12",
+      "terraform_version": "1.12.2",
+      "go_plugin_version": "1.6.3",
+      "branch": "release/0.12",
+      "status": "planned",
+      "maintenance": "planned"
+    },
+    {
+      "libterraform_minor": "0.13",
+      "libterraform_version": "0.13.0",
+      "terraform_minor": "1.13",
+      "terraform_version": "1.13.5",
+      "go_plugin_version": "1.6.3",
+      "branch": "release/0.13",
+      "status": "planned",
+      "maintenance": "planned"
+    },
+    {
+      "libterraform_minor": "0.14",
+      "libterraform_version": "0.14.0",
+      "terraform_minor": "1.14",
+      "terraform_version": "1.14.9",
+      "go_plugin_version": "1.7.0",
+      "branch": "release/0.14",
+      "status": "planned",
+      "maintenance": "planned"
+    },
+    {
+      "libterraform_minor": "0.15",
+      "libterraform_version": "0.15.0",
+      "terraform_minor": "1.15",
+      "terraform_version": "1.15.5",
+      "go_plugin_version": "1.7.0",
+      "branch": "release/0.15",
+      "status": "planned",
+      "maintenance": "planned"
+    }
+  ]
+}

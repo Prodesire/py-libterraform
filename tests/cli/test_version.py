@@ -1,4 +1,5 @@
 from libterraform import TerraformCommand
+from tests.consts import EXPECTED_TERRAFORM_VERSION
 
 
 class TestTerraformCommandVersion:
@@ -12,8 +13,9 @@ class TestTerraformCommandVersion:
             "terraform_outdated",
         ):
             assert key in r.value
+        assert r.value["terraform_version"] == EXPECTED_TERRAFORM_VERSION
 
     def test_version_raw(self, cli: TerraformCommand):
         r = cli.version(json=False)
         assert r.json is False
-        assert "Terraform" in r.value
+        assert f"Terraform v{EXPECTED_TERRAFORM_VERSION}" in r.value

@@ -31,7 +31,11 @@ Homepage = "https://github.com/Prodesire/py-libterraform"
 Repository = "https://github.com/Prodesire/py-libterraform"
 
 [dependency-groups]
-dev = ["pytest>=7.0.1", "ruff>=0.5.2"]
+dev = [
+    "hatchling>=1.27.0",
+    "pytest>=7.0.1",
+    "ruff>=0.5.2",
+]
 
 [build-system]
 requires = ["hatchling"]
