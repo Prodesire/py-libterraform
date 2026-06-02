@@ -81,7 +81,9 @@ def verify(root):
             f"{entry['libterraform_version']} does not match pyproject {project_version}"
         )
 
-    terraform_version = read_terraform_version(root / "terraform" / "version" / "VERSION")
+    terraform_version = read_terraform_version(
+        root / "vendor" / "terraform" / "version" / "VERSION"
+    )
     if entry["terraform_version"] != terraform_version:
         errors.append(
             "Current matrix entry Terraform version "
@@ -89,13 +91,14 @@ def verify(root):
         )
 
     go_plugin_version = read_required_module_version(
-        root / "terraform" / "go.mod",
+        root / "vendor" / "terraform" / "go.mod",
         "github.com/hashicorp/go-plugin",
     ).removeprefix("v")
     if entry["go_plugin_version"] != go_plugin_version:
         errors.append(
             "Current matrix entry go-plugin version "
-            f"{entry['go_plugin_version']} does not match terraform/go.mod {go_plugin_version}"
+            f"{entry['go_plugin_version']} does not match "
+            f"vendor/terraform/go.mod {go_plugin_version}"
         )
 
     return errors

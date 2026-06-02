@@ -20,7 +20,7 @@ jobs:
       - name: Set up GoLang
         uses: actions/setup-go@v6
         with:
-          go-version-file: terraform/go.mod
+          go-version-file: vendor/terraform/go.mod
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v6
         with:
@@ -58,7 +58,7 @@ jobs:
       - name: Set up GoLang
         uses: actions/setup-go@v6
         with:
-          go-version-file: terraform/go.mod
+          go-version-file: vendor/terraform/go.mod
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v6
         with:

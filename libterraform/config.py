@@ -1,5 +1,6 @@
 import json
-from ctypes import *
+from ctypes import Structure, c_char_p, c_void_p, cast
+from typing import Tuple
 
 from libterraform import _free, _lib_tf
 from libterraform.exceptions import LibTerraformError
@@ -16,7 +17,7 @@ _load_config_dir.restype = LoadConfigDirResult
 
 class TerraformConfig:
     @staticmethod
-    def load_config_dir(path: str) -> (dict, dict):
+    def load_config_dir(path: str) -> Tuple[dict, dict]:
         """
         load_config_dir reads the .tf and .tf.json files in the given directory
         as config files and then combines these files into a single Module.
@@ -37,6 +38,7 @@ class TerraformConfig:
         if r_mod is None:
             msg = f"The given directory {path!r} does not exist at all or could not be opened for some reason."
             raise LibTerraformError(msg)
+        assert r_diags is not None
 
         mod = json.loads(r_mod)
         diags = json.loads(r_diags)

@@ -10,6 +10,7 @@ class TestTerraformCommandProviders:
 
     def test_providers_lock(self, cli: TerraformCommand):
         cli.apply()
+        assert cli.cwd is not None
         r = cli.providers_lock(
             fs_mirror=os.path.join(cli.cwd, ".terraform", "providers"),
             enable_plugin_cache=True,

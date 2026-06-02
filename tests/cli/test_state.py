@@ -1,6 +1,3 @@
-import os.path
-import shutil
-
 from libterraform import TerraformCommand
 
 

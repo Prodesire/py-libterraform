@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+set -eu
+
+before_format="$(mktemp)"
+after_format="$(mktemp)"
+trap 'rm -f "$before_format" "$after_format"' EXIT
+
+git diff --no-ext-diff --binary -- . > "$before_format"
+
+echo "Running pre-commit format..."
+make format
+git diff --no-ext-diff --binary -- . > "$after_format"
+
+if ! cmp -s "$before_format" "$after_format"; then
+	echo "make format changed files. Stage the changes, then commit again."
+	exit 1
+fi
+
+echo "Running pre-commit lint..."
+make lint

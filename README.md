@@ -40,11 +40,11 @@ To get Terraform verison:
 >>> TerraformCommand().version()
 <CommandResult retcode=0 json=True>
 >>> _.value
-{'terraform_version': '1.8.4', 'platform': 'darwin_arm64', 'provider_selections': {}, 'terraform_outdated': True}
+{'terraform_version': '1.9.8', 'platform': 'darwin_arm64', 'provider_selections': {}, 'terraform_outdated': True}
 >>> TerraformCommand().version(json=False)
 <CommandResult retcode=0 json=False>
 >>> _.value
-'Terraform v1.8.4\non darwin_arm64\n'
+'Terraform v1.9.8\non darwin_arm64\n'
 ```
 
 To `init` and `apply` according to Terraform configuration files in the specified directory:
@@ -62,7 +62,7 @@ Additionally, `run()` can execute arbitrary commands, returning a tuple `(retcod
 
 ```python
 >>> TerraformCommand.run('version')
-(0, 'Terraform v1.8.4\non darwin_arm64\n', '')
+(0, 'Terraform v1.9.8\non darwin_arm64\n', '')
 >>> TerraformCommand.run('invalid')
 (1, '', 'Terraform has no command named "invalid".\n\nTo see all of Terraform\'s top-level commands, run:\n  terraform -help\n\n')
 ```
@@ -89,6 +89,7 @@ dict_keys(['time_sleep.wait1', 'time_sleep.wait2'])
 
 | libterraform                                          | Terraform                                                   |
 |-------------------------------------------------------|-------------------------------------------------------------|
+| [0.9.0](https://pypi.org/project/libterraform/0.9.0/) | [1.9.8](https://github.com/hashicorp/terraform/tree/v1.9.8) |
 | [0.8.0](https://pypi.org/project/libterraform/0.8.0/) | [1.8.4](https://github.com/hashicorp/terraform/tree/v1.8.4) |
 | [0.7.0](https://pypi.org/project/libterraform/0.7.0/) | [1.6.6](https://github.com/hashicorp/terraform/tree/v1.6.6) |
 | [0.6.0](https://pypi.org/project/libterraform/0.6.0/) | [1.5.7](https://github.com/hashicorp/terraform/tree/v1.5.7) |
@@ -110,6 +111,8 @@ Then, initialize git submodule:
 $ git submodule init
 $ git submodule update
 ```
+
+Terraform and go-plugin are checked out under `vendor/`.
 
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/) and sync dependencies:
 

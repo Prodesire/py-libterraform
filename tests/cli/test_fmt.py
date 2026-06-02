@@ -1,5 +1,3 @@
-import re
-
 from libterraform import TerraformCommand
 from tests.consts import TF_SLEEP2_DIR, TF_SLEEP_DIR
 

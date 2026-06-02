@@ -48,8 +48,8 @@ Before tagging a release:
 2. Update `pyproject.toml`.
 3. Update `tests/consts.py`.
 4. Update README examples and version table.
-5. Ensure `terraform/` points at the intended Terraform tag.
-6. Ensure `go-plugin/` points at the go-plugin version required by `terraform/go.mod`.
+5. Ensure `vendor/terraform/` points at the intended Terraform tag.
+6. Ensure `vendor/go-plugin/` points at the go-plugin version required by `vendor/terraform/go.mod`.
 7. Run:
 
 ```bash
@@ -72,4 +72,3 @@ git tag -a v0.x.y -m "libterraform 0.x.y with Terraform 1.x.z"
 `0.9.0` is the first stable libterraform release adapted to Terraform `1.9.x`. It should use Terraform `1.9.8` unless a newer stable `1.9.x` patch is selected before release.
 
 The `0.9.0` release must pass the matrix verifier, exact Terraform version test, build hook tests, full pytest suite, and wheel build before tagging.
-
