@@ -39,6 +39,7 @@ ENV/
 .coverage.*
 coverage.xml
 htmlcov/
+site/
 build/
 dist/
 *.egg-info/
@@ -65,6 +66,7 @@ coverage.out
 t.*
 
 docs/superpowers/
+.worktrees/
 
 # Coverage
 coverage.txt

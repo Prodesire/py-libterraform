@@ -1,7 +1,7 @@
 <h1 align="center">Python libterraform</h1>
 
 <p align="center">
-  <em>Python binding for <a href="https://www.terraform.io/">Terraform</a>. Bundles Terraform as a shared library so you can run Terraform commands and parse configurations from Python without a separate <code>terraform</code> binary.</em>
+  <em><a href="https://www.terraform.io/">Terraform</a> 的 Python 绑定。将 Terraform 打包为共享库，无需单独安装 <code>terraform</code> 即可从 Python 执行 Terraform 命令和解析配置。</em>
 </p>
 
 <p align="center">
@@ -12,43 +12,43 @@
 </p>
 
 <p align="center">
-  <strong>Language:</strong> English | <a href="README.zh-CN.md">中文</a>
+  <strong>语言：</strong> <a href="README.md">English</a> | 中文
 </p>
 
-> **Documentation:** https://prodesire.github.io/py-libterraform/
+> **文档：** https://prodesire.github.io/py-libterraform/zh/
 
-## Installation
+## 安装
 
 ```bash
 pip install libterraform
 ```
 
-> **Note:** This library does not support multithreading.
+> **注意：** 当前版本不支持多线程调用。
 
-## Usage
+## 使用
 
 ```python
 from libterraform import TerraformCommand, TerraformConfig
 
-# Run Terraform commands
+# 执行 Terraform 命令
 cli = TerraformCommand("path/to/module")
 cli.init(check=True)
 cli.plan(check=True)
 
-# Parse Terraform configuration
+# 解析 Terraform 配置
 module, diagnostics = TerraformConfig.load_config_dir("path/to/module")
 ```
 
-## Contributing
+## 贡献
 
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then:
+安装 [uv](https://docs.astral.sh/uv/getting-started/installation/)，然后：
 
 ```bash
-make install        # Install dependencies and Git hooks
-make build          # Build the shared library
-make test           # Run tests
-make lint           # Run linters
-make doc-serve      # Preview documentation site
+make install        # 安装依赖和 Git hooks
+make build          # 构建共享库
+make test           # 运行测试
+make lint           # 运行检查
+make doc-serve      # 预览文档站
 ```
 
-See the [Development Guide](https://prodesire.github.io/py-libterraform/development/) for details.
+详见[开发指南](https://prodesire.github.io/py-libterraform/zh/development/)。

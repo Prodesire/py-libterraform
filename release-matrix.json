@@ -15,7 +15,7 @@
       "go_plugin_version": "1.4.3",
       "branch": "release/0.8",
       "status": "released",
-      "maintenance": "active"
+      "maintenance": "passive"
     },
     {
       "libterraform_minor": "0.9",
@@ -34,8 +34,8 @@
       "terraform_version": "1.10.5",
       "go_plugin_version": "1.6.0",
       "branch": "release/0.10",
-      "status": "planned",
-      "maintenance": "planned"
+      "status": "released",
+      "maintenance": "active"
     },
     {
       "libterraform_minor": "0.11",

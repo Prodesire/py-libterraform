@@ -1,0 +1,56 @@
+[project]
+site_name = "Python libterraform"
+site_description = "Python binding for Terraform."
+site_url = "https://prodesire.github.io/py-libterraform/"
+repo_url = "https://github.com/Prodesire/py-libterraform"
+repo_name = "Prodesire/py-libterraform"
+edit_uri = "edit/main/docs/en/"
+docs_dir = "docs/en"
+site_dir = "site"
+nav = [
+  { "Home" = "index.md" },
+  { "Getting Started" = [
+    { "Installation" = "installation.md" },
+    { "Quick Start" = "quickstart.md" },
+  ] },
+  { "API Reference" = [
+    { "Overview" = "api/index.md" },
+    { "TerraformCommand" = "api/terraform-command.md" },
+    { "TerraformConfig" = "api/terraform-config.md" },
+    { "Exceptions" = "api/exceptions.md" },
+  ] },
+  { "Development" = [
+    { "Development Guide" = "development.md" },
+    { "Release Policy" = "release-policy.md" },
+  ] },
+]
+
+[project.theme]
+language = "en"
+features = [
+  "navigation.sections",
+  "navigation.indexes",
+  "navigation.top",
+  "search.highlight",
+  "search.suggest",
+  "content.code.copy",
+  "content.action.edit",
+]
+
+[project.plugins.mkdocstrings.handlers.python]
+paths = ["src"]
+
+[project.plugins.mkdocstrings.handlers.python.options]
+docstring_style = "sphinx"
+filters = ["!^_"]
+members_order = "source"
+separate_signature = true
+show_root_heading = true
+show_signature_annotations = true
+show_source = false
+
+[project.extra]
+alternate = [
+  { name = "English", link = "https://prodesire.github.io/py-libterraform/", lang = "en" },
+  { name = "中文", link = "https://prodesire.github.io/py-libterraform/zh/", lang = "zh" },
+]

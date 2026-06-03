@@ -6,9 +6,9 @@ libterraform minor versions track Terraform minor versions:
 
 | libterraform line | Terraform line | Branch |
 |---|---|---|
-| `0.8.x` | `1.8.x` | `release/0.8` |
-| `0.9.x` | `1.9.x` | `release/0.9` |
 | `0.10.x` | `1.10.x` | `release/0.10` |
+| `0.9.x` | `1.9.x` | `release/0.9` |
+| `0.8.x` | `1.8.x` | `release/0.8` |
 
 The exact version mapping is stored in `release-matrix.json`. The matrix is the source of truth; README tables and release notes are summaries.
 
@@ -66,9 +66,3 @@ git tag -a v0.x.y -m "libterraform 0.x.y with Terraform 1.x.z"
 ```
 
 10. Push the branch and tag. The tag triggers the release workflow.
-
-## 0.9.0 Release Criteria
-
-`0.9.0` is the first stable libterraform release adapted to Terraform `1.9.x`. It should use Terraform `1.9.8` unless a newer stable `1.9.x` patch is selected before release.
-
-The `0.9.0` release must pass the matrix verifier, exact Terraform version test, build hook tests, full pytest suite, and wheel build before tagging.

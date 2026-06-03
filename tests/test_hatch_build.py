@@ -19,6 +19,26 @@ def test_build_hook_lives_under_scripts():
     assert not (ROOT / "hatch_build.py").exists()
 
 
+def test_makefile_install_sets_git_hooks_without_install_hooks_target():
+    makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+
+    assert "install-hooks" not in makefile
+    assert "git config core.hooksPath $(GIT_HOOKS_PATH)" in makefile
+    assert '@echo "Git hooks installed from $(GIT_HOOKS_PATH)."' in makefile
+
+
+def test_makefile_clean_merges_python_and_build_cleanup():
+    makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+
+    assert "clean-pyc" not in makefile
+    assert "clean-build" not in makefile
+    assert "clean: clean-pyc clean-build" not in makefile
+    assert "find . -name '*.pyc' -exec rm -f {} +" in makefile
+    assert "find . -name '__pycache__' -exec rm -rf {} +" in makefile
+    assert "rm -rf build dist *.egg-info .eggs" in makefile
+    assert "find . -name '*.h' -exec rm -f {} +" in makefile
+
+
 def test_build_hook_resolves_repository_root_from_scripts_dir():
     assert Path(hatch_build.repository_root()) == ROOT
 

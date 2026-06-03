@@ -31,7 +31,7 @@ class CommandResult:
 class TerraformCommand:
     """Terraform command line.
 
-    https://www.terraform.io/
+    https://developer.hashicorp.com/terraform
     """
 
     def __init__(self, cwd=None):
@@ -152,7 +152,7 @@ class TerraformCommand:
     def version(
         self, check: bool = False, json: bool = True, **options
     ) -> CommandResult:
-        """Refer to https://www.terraform.io/docs/commands/version
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/version
 
         Displays the version of Terraform and all installed plugins.
 
@@ -189,7 +189,7 @@ class TerraformCommand:
         test_directory: str = None,
         **options,
     ) -> CommandResult:
-        """Refer to https://www.terraform.io/docs/commands/init
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/init
 
         Initialize a new or existing Terraform working directory by creating
         initial files, loading any remote state, downloading modules, etc.
@@ -279,7 +279,7 @@ class TerraformCommand:
         test_directory: str = None,
         **options,
     ) -> CommandResult:
-        """Refer to https://www.terraform.io/docs/commands/validate
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/validate
 
         Validate the configuration files in a directory, referring only to the
         configuration and not accessing any remote services such as remote state,
@@ -346,7 +346,7 @@ class TerraformCommand:
         state: str = None,
         **options,
     ) -> CommandResult:
-        """Refer to https://www.terraform.io/docs/commands/plan
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/plan
 
         Generates a speculative execution plan, showing what actions Terraform
         would take to apply the current configuration. This command will not
@@ -442,7 +442,7 @@ class TerraformCommand:
         no_color: bool = True,
         **options,
     ) -> CommandResult:
-        """Refer to https://www.terraform.io/docs/commands/show
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/show
 
         Reads and outputs a Terraform state or plan file in a human-readable
         form. If no path is specified, the current state will be shown.
@@ -481,9 +481,11 @@ class TerraformCommand:
         state: str = None,
         state_out: str = None,
         destroy: bool = None,
+        vars: dict = None,
+        var_files: List[str] = None,
         **options,
     ) -> CommandResult:
-        """Refer to https://www.terraform.io/docs/commands/apply
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/apply
 
         Creates or updates infrastructure according to Terraform configuration
         files in the current directory.
@@ -524,6 +526,11 @@ class TerraformCommand:
         :param destroy: Select the "destroy" planning mode, which creates a plan
             to destroy all objects currently managed by this Terraform configuration
             instead of the usual behavior.
+        :param vars: Set variables in the root module of the configuration.
+            With Terraform 1.10 and later, this can also provide apply-time
+            ephemeral variables when applying a saved plan file.
+        :param var_files: Load variable values from the given files, in addition to
+            the default files terraform.tfvars and *.auto.tfvars.
         :param options: More command options.
         """
         options.update(
@@ -538,6 +545,8 @@ class TerraformCommand:
             state=state,
             state_out=state_out,
             destroy=flag(destroy),
+            var=vars,
+            var_file=var_files,
         )
         args = [plan] if plan else None
         retcode, stdout, stderr = self.run(
@@ -562,7 +571,7 @@ class TerraformCommand:
         state_out: str = None,
         **options,
     ) -> CommandResult:
-        """Refer to https://www.terraform.io/docs/commands/destroy
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/destroy
 
         Destroy Terraform-managed infrastructure.
 
@@ -628,7 +637,7 @@ class TerraformCommand:
         recursive: bool = None,
         **options,
     ) -> CommandResult:
-        """Refer to https://www.terraform.io/docs/commands/fmt
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/fmt
 
         Rewrites all Terraform configuration files to a canonical format. All
         configuration files (.tf), variables files (.tfvars), and testing files
@@ -686,7 +695,7 @@ class TerraformCommand:
         force: bool = True,
         **options,
     ) -> CommandResult:
-        """Refer to https://www.terraform.io/docs/commands/force-unlock
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/force-unlock
 
         Manually unlock the state for the defined configuration.
 
@@ -719,7 +728,7 @@ class TerraformCommand:
         test_directory: str = None,
         **options,
     ) -> CommandResult:
-        """Refer to https://www.terraform.io/docs/commands/get
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/get
 
         Downloads and installs modules needed for the configuration in the
         current working directory.
@@ -759,7 +768,7 @@ class TerraformCommand:
         type: str = None,
         **options,
     ) -> CommandResult:
-        """Refer to https://www.terraform.io/docs/commands/graph
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/graph
 
         Produces a representation of the dependency graph between different
         objects in the current configuration and state.
@@ -816,7 +825,7 @@ class TerraformCommand:
         ignore_remote_version: bool = None,
         **options,
     ) -> CommandResult:
-        """Refer to https://www.terraform.io/docs/commands/import
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/import
 
         Import existing infrastructure into your Terraform state.
 
@@ -891,7 +900,7 @@ class TerraformCommand:
         raw: bool = None,
         **options,
     ) -> CommandResult:
-        """Refer to https://www.terraform.io/docs/commands/output
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/output
 
         Reads an output variable from a Terraform state file and prints
         the value. With no additional arguments, output will display all
@@ -921,6 +930,30 @@ class TerraformCommand:
         value = json_loads(stdout) if json else stdout
         return CommandResult(retcode, value, stderr, json=json)
 
+    def modules(
+        self,
+        check: bool = False,
+        json: bool = True,
+        **options,
+    ) -> CommandResult:
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/modules
+
+        Prints source and version data about all declared modules in Terraform
+        configuration for the current working directory.
+
+        Terraform 1.10 requires json output for this command, so this assumes
+        you want to get json output by default.
+
+        :param check: Whether to check return code.
+        :param json: Whether to load stdout as json.
+        :param options: More command options.
+        """
+        retcode, stdout, stderr = self.run(
+            "modules", options=options, chdir=self.cwd, check=check, json=json
+        )
+        value = json_loads(stdout) if json else stdout
+        return CommandResult(retcode, value, stderr, json=json)
+
     def providers(
         self,
         subcmd: str = None,
@@ -931,7 +964,7 @@ class TerraformCommand:
         test_directory: str = None,
         **options,
     ) -> CommandResult:
-        """Refer to https://www.terraform.io/docs/commands/providers
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/providers
 
         Prints out a tree of modules in the referenced configuration annotated with
         their provider requirements.
@@ -972,7 +1005,7 @@ class TerraformCommand:
         enable_plugin_cache: bool = False,
         **options,
     ) -> CommandResult:
-        """Refer to https://www.terraform.io/docs/commands/providers/lock
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/providers/lock
 
         Normally the dependency lock file (.terraform.lock.hcl) is updated
         automatically by "terraform init", but the information available to the
@@ -1036,7 +1069,7 @@ class TerraformCommand:
         platform: Union[str, List[str]] = None,
         **options,
     ) -> CommandResult:
-        """Refer to https://www.terraform.io/docs/commands/providers/mirror
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/providers/mirror
 
         Populates a local directory with copies of the provider plugins needed for
         the current configuration, so that the directory can be used either directly
@@ -1075,7 +1108,7 @@ class TerraformCommand:
         no_color: bool = True,
         **options,
     ) -> CommandResult:
-        """Refer to https://www.terraform.io/docs/commands/providers
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/providers
 
         Prints out a json representation of the schemas for all providers used
         in the current configuration.
@@ -1103,7 +1136,7 @@ class TerraformCommand:
         parallelism: int = None,
         **options,
     ) -> CommandResult:
-        """Refer to https://www.terraform.io/docs/commands/refresh
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/refresh
 
         Update the state file of your infrastructure with metadata that matches
         the physical resources they are tracking.
@@ -1158,7 +1191,7 @@ class TerraformCommand:
         json: bool = False,
         **options,
     ) -> CommandResult:
-        """Refer to https://www.terraform.io/docs/commands/state
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/state
 
         This command has subcommands for advanced state management.
 
@@ -1197,7 +1230,7 @@ class TerraformCommand:
         ids: Sequence[str] = None,
         **options,
     ):
-        """Refer to https://www.terraform.io/docs/commands/state/list
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/state/list
 
         List resources in the Terraform state.
 
@@ -1239,7 +1272,7 @@ class TerraformCommand:
         ignore_remote_version: bool = None,
         **options,
     ):
-        """Refer to https://www.terraform.io/docs/commands/state/mv
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/state/mv
 
         This command will move an item matched by the address given to the
         destination address. This command can also move to a destination address
@@ -1287,7 +1320,7 @@ class TerraformCommand:
         no_color: bool = True,
         **options,
     ):
-        """Refer to https://www.terraform.io/docs/commands/state/pull
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/state/pull
 
         Pull the state from its location, upgrade the local copy, and output it.
         As part of this process, Terraform will upgrade the state format of the
@@ -1321,7 +1354,7 @@ class TerraformCommand:
         lock_timeout: str = None,
         **options,
     ):
-        """Refer to https://www.terraform.io/docs/commands/state/push
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/state/push
 
         Update remote state from a local state file at path.
         The command will protect you against writing an older serial or a
@@ -1366,7 +1399,7 @@ class TerraformCommand:
         ignore_remote_version: bool = None,
         **options,
     ):
-        """Refer to https://www.terraform.io/cli/commands/state/replace-provider
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/state/replace-provider
 
         Replace provider for resources in the Terraform state.
 
@@ -1410,7 +1443,7 @@ class TerraformCommand:
         ignore_remote_version: bool = None,
         **options,
     ):
-        """Refer to https://www.terraform.io/cli/commands/state/rm
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/state/rm
 
         Remove one or more items from the Terraform state, causing Terraform to
         "forget" those items without first destroying them in the remote system.
@@ -1460,7 +1493,7 @@ class TerraformCommand:
         state: str = None,
         **options,
     ):
-        """Refer to https://www.terraform.io/cli/commands/state/show
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/state/show
 
         Shows the attributes of a resource in the Terraform state.
 
@@ -1493,7 +1526,7 @@ class TerraformCommand:
         ignore_remote_version: bool = None,
         **options,
     ):
-        """Refer to https://www.terraform.io/cli/commands/taint
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/taint
 
         Terraform uses the term "tainted" to describe a resource instance
         which may not be fully functional, either because its creation
@@ -1552,7 +1585,7 @@ class TerraformCommand:
         ignore_remote_version: bool = None,
         **options,
     ):
-        """Refer to https://www.terraform.io/cli/commands/untaint
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/untaint
 
         Terraform uses the term "tainted" to describe a resource instance
         which may not be fully functional, either because its creation
@@ -1604,7 +1637,7 @@ class TerraformCommand:
         verbose: bool = None,
         **options,
     ):
-        """Refer to https://www.terraform.io/cli/commands/test
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/test
 
         Executes automated integration tests against the current Terraform
         configuration.
@@ -1661,7 +1694,7 @@ class TerraformCommand:
         no_color: bool = True,
         **options,
     ) -> CommandResult:
-        """Refer to https://www.terraform.io/docs/commands/workspace
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/workspace
 
         new, list, show, select and delete Terraform workspaces.
 
@@ -1690,7 +1723,7 @@ class TerraformCommand:
         state: str = None,
         **options,
     ):
-        """Refer to https://www.terraform.io/docs/commands/workspace/new
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/workspace/new
 
         Create a new Terraform workspace.
 
@@ -1718,7 +1751,7 @@ class TerraformCommand:
         no_color: bool = True,
         **options,
     ):
-        """Refer to https://www.terraform.io/docs/commands/workspace/list
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/workspace/list
 
         List Terraform workspaces.
 
@@ -1734,7 +1767,7 @@ class TerraformCommand:
         no_color: bool = True,
         **options,
     ):
-        """Refer to https://www.terraform.io/docs/commands/workspace/show
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/workspace/show
 
         Show the name of the current workspace.
 
@@ -1751,7 +1784,7 @@ class TerraformCommand:
         no_color: bool = True,
         **options,
     ):
-        """Refer to https://www.terraform.io/docs/commands/workspace/select
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/workspace/select
 
         Select a different Terraform workspace.
 
@@ -1774,7 +1807,7 @@ class TerraformCommand:
         lock_timeout: str = None,
         **options,
     ):
-        """Refer to https://www.terraform.io/docs/commands/workspace/delete
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/workspace/delete
 
         Delete a Terraform workspace.
 

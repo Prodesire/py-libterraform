@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/apparentlymart/go-shquot/shquot"
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/go-plugin"
 	svchost "github.com/hashicorp/terraform-svchost"
 	"github.com/hashicorp/terraform-svchost/disco"
@@ -23,7 +24,6 @@ import (
 	"github.com/hashicorp/terraform/internal/logging"
 	"github.com/hashicorp/terraform/internal/terminal"
 	"github.com/hashicorp/terraform/version"
-	"github.com/hashicorp/cli"
 	"github.com/mitchellh/colorstring"
 	"go.opentelemetry.io/otel/trace"
 	"log"
@@ -279,7 +279,7 @@ func RunCli(cArgc C.int, cArgv **C.char, cStdOutFd C.int, cStdErrFd C.int) C.int
 		delete(shutdownChs, shutdownCh)
 		close(shutdownCh)
 	}()
-	meta := NewMeta(originalWd, streams, config, services, providerSrc, providerDevOverrides, unmanagedProviders, shutdownCh)
+	meta := NewMeta(originalWd, streams, config, services, providerSrc, providerDevOverrides, unmanagedProviders, shutdownCh, ctx)
 	commands := NewCommands(meta)
 
 	// Run checkpoint
@@ -396,6 +396,7 @@ func NewMeta(
 	providerDevOverrides map[addrs.Provider]getproviders.PackageLocalDir,
 	unmanagedProviders map[addrs.Provider]*plugin.ReattachConfig,
 	shutdownCh <-chan struct{},
+	ctx context.Context,
 ) command.Meta {
 	var inAutomation bool
 	if v := os.Getenv(runningInAutomationEnvName); v != "" {
@@ -435,11 +436,16 @@ func NewMeta(
 		CLIConfigDir:        configDir,
 		PluginCacheDir:      config.PluginCacheDir,
 
-		ShutdownCh: shutdownCh,
+		PluginCacheMayBreakDependencyLockFile: config.PluginCacheMayBreakDependencyLockFile,
+
+		ShutdownCh:    shutdownCh,
+		CallerContext: ctx,
 
 		ProviderSource:       providerSrc,
 		ProviderDevOverrides: providerDevOverrides,
 		UnmanagedProviders:   unmanagedProviders,
+
+		AllowExperimentalFeatures: ExperimentsAllowed(),
 	}
 	return meta
 }
@@ -545,6 +551,24 @@ func NewCommands(meta command.Meta) map[string]cli.CommandFactory {
 
 		"logout": func() (cli.Command, error) {
 			return &command.LogoutCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"metadata": func() (cli.Command, error) {
+			return &command.MetadataCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"metadata functions": func() (cli.Command, error) {
+			return &command.MetadataFunctionsCommand{
+				Meta: meta,
+			}, nil
+		},
+
+		"modules": func() (cli.Command, error) {
+			return &command.ModulesCommand{
 				Meta: meta,
 			}, nil
 		},
