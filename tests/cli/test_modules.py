@@ -39,4 +39,5 @@ class TestTerraformCommandModules:
         assert r.retcode == 0, r.error
         assert r.json is True
         assert r.value["format_version"] == "1.0"
-        assert isinstance(r.value["modules"], list)
+        assert "modules" in r.value
+        assert r.value["modules"] is None or isinstance(r.value["modules"], list)

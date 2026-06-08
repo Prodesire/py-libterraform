@@ -6,9 +6,9 @@ libterraform minor versions track Terraform minor versions:
 
 | libterraform line | Terraform line | Branch |
 |---|---|---|
+| `0.11.x` | `1.11.x` | `release/0.11` |
 | `0.10.x` | `1.10.x` | `release/0.10` |
 | `0.9.x` | `1.9.x` | `release/0.9` |
-| `0.8.x` | `1.8.x` | `release/0.8` |
 
 The exact version mapping is stored in `release-matrix.json`. The matrix is the source of truth; README tables and release notes are summaries.
 

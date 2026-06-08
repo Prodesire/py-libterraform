@@ -100,7 +100,7 @@ make doc-serve
 Build it with the same strictness used by CI:
 
 ```bash
-make docs-build
+make doc-build
 ```
 
 The generated English site is written to `site/`, and the Chinese site is

@@ -6,9 +6,9 @@ libterraform 的 minor 版本跟随 Terraform 的 minor 版本：
 
 | libterraform 版本线 | Terraform 版本线 | 分支 |
 |---|---|---|
+| `0.11.x` | `1.11.x` | `release/0.11` |
 | `0.10.x` | `1.10.x` | `release/0.10` |
 | `0.9.x` | `1.9.x` | `release/0.9` |
-| `0.8.x` | `1.8.x` | `release/0.8` |
 
 准确的版本映射存放在 `release-matrix.json`。该矩阵是事实来源；README
 表格和 release notes 只是摘要。

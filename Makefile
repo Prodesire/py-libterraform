@@ -6,7 +6,7 @@ PYTHON_CHECK_PATHS=src tests scripts
 GIT_HOOKS_PATH=scripts/git-hooks
 DOCS_PORT?=8000
 
-.PHONY: help install test lint build docs-build doc-serve publish clean format
+.PHONY: help install test lint build doc-build doc-serve publish clean format
 
 help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[32m%-15s\033[0m %s\n", $$1, $$2}'
@@ -26,13 +26,13 @@ lint: ## Run Ruff and ty checks
 build: ## Build libterraform
 	uv build --wheel $(UV_PYTHON_FLAG)
 
-docs-build: ## Build the documentation site
+doc-build: ## Build the documentation site
 	rm -rf site
 	uv run $(UV_PYTHON_FLAG) --group docs zensical build --strict -f zensical.toml
 	uv run $(UV_PYTHON_FLAG) --group docs zensical build --strict -f zensical.zh.toml
 
 doc-serve: ## Serve the documentation site locally
-	$(MAKE) docs-build
+	$(MAKE) doc-build
 	uv run $(UV_PYTHON_FLAG) python -m http.server $(DOCS_PORT) --directory site
 
 publish: ## Publish libterraform to PyPI

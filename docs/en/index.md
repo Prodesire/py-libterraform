@@ -24,6 +24,7 @@ parsing Terraform configuration directories.
 
 | libterraform | Terraform |
 |---|---|
+| [0.11.0](https://pypi.org/project/libterraform/0.11.0/) | [1.11.4](https://github.com/hashicorp/terraform/tree/v1.11.4) |
 | [0.10.0](https://pypi.org/project/libterraform/0.10.0/) | [1.10.5](https://github.com/hashicorp/terraform/tree/v1.10.5) |
 | [0.9.0](https://pypi.org/project/libterraform/0.9.0/) | [1.9.8](https://github.com/hashicorp/terraform/tree/v1.9.8) |
 | [0.8.0](https://pypi.org/project/libterraform/0.8.0/) | [1.8.4](https://github.com/hashicorp/terraform/tree/v1.8.4) |
