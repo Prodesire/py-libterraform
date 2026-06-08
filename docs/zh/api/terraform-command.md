@@ -751,7 +751,7 @@ mirror 目录将包含 JSON 索引文件，可以与 mirror 的包一起发布�
 
 | 参数 | 类型 | 说明 | 默认值 |
 |---|---|---|---|
-| `subcmd` | `str` | state 子命令名：`list`、`mv`、`pull`、`push`、`replace-provider`、`rm`、`show`。 | *必填* |
+| `subcmd` | `str` | state 子命令名：`identities`、`list`、`mv`、`pull`、`push`、`replace-provider`、`rm`、`show`。 | *必填* |
 | `args` | `Sequence[str]` | 子命令参数。 | `None` |
 | `check` | `bool` | 是否检查返回码。 | `False` |
 | `no_color` | `bool` | 是否禁用颜色输出。 | `True` |
@@ -784,6 +784,36 @@ mirror 目录将包含 JSON 索引文件，可以与 mirror 的包一起发布�
 | `no_color` | `bool` | 是否禁用颜色输出。 | `True` |
 | `state` | `str` | state 文件路径。默认使用当前选定 workspace 的 state。 | `None` |
 | `ids` | `Sequence[str]` | 按资源 ID 过滤结果，仅包含资源类型中 `id` 属性值在给定列表中的实例。 | `None` |
+| `**options` | | 额外命令选项。 | |
+
+::: libterraform.cli.TerraformCommand.state_identities
+    options:
+      heading_level: 3
+      show_root_full_path: false
+      show_docstring_description: false
+      show_docstring_parameters: false
+      show_docstring_returns: false
+      show_docstring_raises: false
+      show_docstring_warns: false
+      show_docstring_examples: false
+
+参考 <https://developer.hashicorp.com/terraform/cli/commands/state/identities>
+
+以 JSON 形式列出 Terraform state 中资源实例的 identities。
+
+Terraform 1.12 起提供该命令。包装方法始终传入 `-json`，并将 stdout 解析为
+Python 对象。地址参数可用于按资源或 module 过滤实例；如果没有给定地址，则
+列出所有带有 identity 信息的资源实例。
+
+参数：
+
+| 参数 | 类型 | 说明 | 默认值 |
+|---|---|---|---|
+| `*addrs` | `str` | 可用于按资源或 module 过滤实例（可变参数）。如果未给定，则列出所有资源 identity。 | |
+| `check` | `bool` | 是否检查返回码。 | `False` |
+| `no_color` | `bool` | 是否禁用颜色输出。 | `True` |
+| `state` | `str` | state 文件路径。默认使用当前选定 workspace 的 state。 | `None` |
+| `identity_id` | `str` | 按资源 ID 过滤结果，仅包含资源类型中 `id` 属性值等于该字符串的实例。 | `None` |
 | `**options` | | 额外命令选项。 | |
 
 ::: libterraform.cli.TerraformCommand.state_mv

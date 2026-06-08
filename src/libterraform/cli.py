@@ -1203,7 +1203,8 @@ class TerraformCommand:
         well with the common Unix utilities such as grep, awk, etc. We recommend
         using those tools to perform more advanced state tasks.
 
-        :param subcmd: Sub commands: list, mv, pull, push, replace-provider, rm and show.
+        :param subcmd: Sub commands: identities, list, mv, pull, push,
+            replace-provider, rm and show.
         :param args: Args for command.
         :param check: Whether to check return code.
         :param no_color: True to output not contain any color.
@@ -1257,6 +1258,47 @@ class TerraformCommand:
         options.update(id=ids)
         return self.state(
             "list", args=addrs, check=check, no_color=no_color, state=state, **options
+        )
+
+    def state_identities(
+        self,
+        *addrs,
+        check: bool = False,
+        no_color: bool = True,
+        state: str = None,
+        identity_id: str = None,
+        **options,
+    ):
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/state/identities
+
+        List the identities of resources in the Terraform state in JSON format.
+
+        The address argument can be used to filter the instances by resource or
+        module. If no pattern is given, identities for all resource instances are
+        listed.
+
+        :param addrs: Can be used to filter the instances by resource or module.
+            If no pattern is given, all resource identities are listed.
+        :param check: Whether to check return code.
+        :param no_color: True to output not contain any color.
+        :param state: Path to a Terraform state file to use to look up
+            Terraform-managed resources. By default, Terraform will consult
+            the state of the currently-selected workspace.
+        :param identity_id: Filters the results to include only instances whose
+            resource types have an attribute named "id" whose value equals the
+            given string.
+        :param options: More command options.
+        """
+        options.update(state=state)
+        if identity_id is not None:
+            options.update(id=identity_id)
+        return self.state(
+            "identities",
+            args=addrs,
+            check=check,
+            no_color=no_color,
+            json=True,
+            **options,
         )
 
     def state_mv(

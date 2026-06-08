@@ -27,6 +27,8 @@ def test_current_release_matrix_matches_checked_out_repository():
 
     assert entry["libterraform_minor"] == verifier.minor_from_version(project_version)
     assert entry["libterraform_version"] == project_version
+    assert entry["status"] == "released"
+    assert entry["maintenance"] == "active"
     assert entry["terraform_version"] == verifier.read_terraform_version(
         ROOT / "upstream" / "terraform" / "version" / "VERSION"
     )

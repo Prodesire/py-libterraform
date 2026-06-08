@@ -717,6 +717,12 @@ func NewCommands(meta command.Meta) map[string]cli.CommandFactory {
 			}, nil
 		},
 
+		"state identities": func() (cli.Command, error) {
+			return &command.StateIdentitiesCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"state rm": func() (cli.Command, error) {
 			return &command.StateRmCommand{
 				StateMeta: command.StateMeta{

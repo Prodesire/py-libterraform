@@ -2,6 +2,41 @@ from libterraform import TerraformCommand
 
 
 class TestTerraformCommandState:
+    def test_state_identities_forces_json_option(self, monkeypatch):
+        cli = TerraformCommand()
+        expected = object()
+        calls = {}
+
+        def fake_state(subcmd, **kwargs):
+            calls["subcmd"] = subcmd
+            calls["kwargs"] = kwargs
+            return expected
+
+        monkeypatch.setattr(cli, "state", fake_state)
+
+        result = cli.state_identities(
+            "time_sleep.wait1",
+            check=True,
+            no_color=False,
+            state="terraform.tfstate",
+            identity_id="wait-1",
+            experimental=True,
+        )
+
+        assert result is expected
+        assert calls == {
+            "subcmd": "identities",
+            "kwargs": {
+                "args": ("time_sleep.wait1",),
+                "check": True,
+                "no_color": False,
+                "json": True,
+                "state": "terraform.tfstate",
+                "id": "wait-1",
+                "experimental": True,
+            },
+        }
+
     def test_state_list(self, cli: TerraformCommand):
         cli.apply()
         r = cli.state_list()
@@ -26,6 +61,12 @@ class TestTerraformCommandState:
         r = cli.state_list(state="terraform.tfstate")
         assert r.retcode == 0, r.error
         assert r.value
+
+    def test_state_identities(self, cli: TerraformCommand):
+        cli.apply()
+        r = cli.state_identities()
+        assert r.retcode == 0, r.error
+        assert isinstance(r.value, dict)
 
     def test_state_mv(self, cli: TerraformCommand):
         cli.apply()
