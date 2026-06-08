@@ -559,7 +559,7 @@ ID，具体语法请参考对应资源类型的文档。
 输出当前工作目录中 Terraform 配置声明的所有 modules 的 source 和 version
 信息。
 
-Terraform 1.10 要求此命令以 JSON 格式输出，因此默认以 JSON 格式输出。
+默认以 JSON 格式输出。Terraform 1.11 起支持人类可读输出，传入 `json=False` 可获取原始文本。
 
 参数：
 
@@ -1083,6 +1083,7 @@ Terraform 会在当前配置和测试目录中搜索 `.tftest.hcl` 文件，然�
 | `cloud_run` | `str` | 如果指定，Terraform 将使用 HCP Terraform 或 Terraform Enterprise 远程执行此测试运行。需要指定在私有模块注册表中注册的模块源作为参数。 | `None` |
 | `filter` | `Union[str, List[str]]` | 用于筛选测试文件或测试名。 | `None` |
 | `json` | `bool` | 是否以 JSON 格式输出。 | `True` |
+| `junit_xml` | `str` | 将 JUnit XML 测试报告写入指定文件。`junit_xml` 仅支持本地测试执行，不能与 `cloud_run` 同时使用。 | `None` |
 | `test_directory` | `str` | 设置 Terraform 测试目录，默认为 `"tests"`。 | `None` |
 | `verbose` | `bool` | 在每个测试运行块执行时打印 plan 或 state。 | `None` |
 | `**options` | | 额外命令选项。 | |

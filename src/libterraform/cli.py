@@ -941,8 +941,7 @@ class TerraformCommand:
         Prints source and version data about all declared modules in Terraform
         configuration for the current working directory.
 
-        Terraform 1.10 requires json output for this command, so this assumes
-        you want to get json output by default.
+        By default, this assumes you want to get json output.
 
         :param check: Whether to check return code.
         :param json: Whether to load stdout as json.
@@ -1633,6 +1632,7 @@ class TerraformCommand:
         cloud_run: str = None,
         filter: Union[str, List[str]] = None,
         json: bool = True,
+        junit_xml: str = None,
         test_directory: str = None,
         verbose: bool = None,
         **options,
@@ -1666,6 +1666,7 @@ class TerraformCommand:
             the correct HCP Terraform or Terraform Enterprise module
             and organization.
         :param json: Whether to load stdout as json.
+        :param junit_xml: Write a JUnit XML test report to the given file.
         :param test_directory: Set the Terraform test directory, defaults to "tests".
         :param verbose: Print the plan or state for each test run block as it
             executes.
@@ -1677,6 +1678,7 @@ class TerraformCommand:
             no_color=flag(no_color),
             cloud_run=cloud_run,
             filter=filter,
+            junit_xml=junit_xml,
             test_directory=test_directory,
             verbose=flag(verbose),
         )

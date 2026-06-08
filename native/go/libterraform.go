@@ -426,7 +426,7 @@ func NewMeta(
 		View:       views.NewView(streams).SetRunningInAutomation(inAutomation),
 
 		Color:            true,
-		GlobalPluginDirs: globalPluginDirs(),
+		GlobalPluginDirs: cliconfig.GlobalPluginDirs(),
 		Ui:               Ui,
 
 		Services:        services,

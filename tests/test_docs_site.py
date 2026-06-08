@@ -171,7 +171,12 @@ def test_chinese_api_reference_has_method_descriptions_and_parameters():
         "`from_provider`",
         "`to_provider`",
         "`cloud_run`",
+        "`junit_xml`",
         "`test_directory`",
+        "Terraform 1.11 起支持人类可读输出",
+        "传入 `json=False` 可获取原始文本",
+        "将 JUnit XML 测试报告写入指定文件",
+        "`junit_xml` 仅支持本地测试执行，不能与 `cloud_run` 同时使用",
     ]:
         assert phrase in command_page
 
@@ -242,10 +247,11 @@ def test_docs_workflow_builds_and_deploys_github_pages():
     assert "id-token: write" in workflow
 
 
-def test_makefile_exposes_docs_build_and_serve_targets():
+def test_makefile_exposes_doc_build_and_serve_targets():
     makefile = read_text("Makefile")
 
-    assert "docs-build" in makefile
+    assert "docs-build" not in makefile
+    assert "doc-build" in makefile
     assert "doc-serve" in makefile
     assert ".PHONY:" in makefile
     assert (
@@ -257,5 +263,5 @@ def test_makefile_exposes_docs_build_and_serve_targets():
         in makefile
     )
     assert "python -m http.server" in makefile
-    assert "docs-build: ## Build the documentation site" in makefile
+    assert "doc-build: ## Build the documentation site" in makefile
     assert "doc-serve: ## Serve the documentation site locally" in makefile

@@ -96,7 +96,7 @@ make doc-serve
 按 CI 严格模式构建：
 
 ```bash
-make docs-build
+make doc-build
 ```
 
 英文站点写入 `site/`，中文站点写入 `site/zh/`。GitHub Pages workflow 会在
