@@ -797,13 +797,15 @@ mirror 目录将包含 JSON 索引文件，可以与 mirror 的包一起发布�
       show_docstring_warns: false
       show_docstring_examples: false
 
-参考 <https://developer.hashicorp.com/terraform/cli/commands/state/identities>
+参考 <https://developer.hashicorp.com/terraform/cli/v1.12.x/commands/state>
 
 以 JSON 形式列出 Terraform state 中资源实例的 identities。
 
-Terraform 1.12 起提供该命令。包装方法始终传入 `-json`，并将 stdout 解析为
-Python 对象。地址参数可用于按资源或 module 过滤实例；如果没有给定地址，则
-列出所有带有 identity 信息的资源实例。
+Terraform 1.12 起提供该命令；HashiCorp Developer 目前没有为
+`state identities` 提供独立页面，因此这里链接到 Terraform 1.12 的 state
+命令总页。包装方法始终传入 `-json`，并将 stdout 解析为 Python 对象。地址
+参数可用于按资源或 module 过滤实例；如果没有给定地址，则列出所有带有
+identity 信息的资源实例。
 
 参数：
 

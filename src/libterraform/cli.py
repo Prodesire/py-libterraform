@@ -1269,7 +1269,7 @@ class TerraformCommand:
         identity_id: str = None,
         **options,
     ):
-        """Refer to https://developer.hashicorp.com/terraform/cli/commands/state/identities
+        """Refer to https://developer.hashicorp.com/terraform/cli/v1.12.x/commands/state
 
         List the identities of resources in the Terraform state in JSON format.
 

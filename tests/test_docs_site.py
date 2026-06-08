@@ -151,9 +151,16 @@ def test_chinese_api_reference_has_method_descriptions_and_parameters():
     command_page = read_text("docs/zh/api/terraform-command.md")
     config_page = read_text("docs/zh/api/terraform-config.md")
     exceptions_page = read_text("docs/zh/api/exceptions.md")
+    cli_source = read_text("src/libterraform/cli.py")
+    bad_state_identities_link = "/".join(
+        ["https://developer.hashicorp.com/terraform/cli/commands/state", "identities"]
+    )
 
     for method in public_methods("src/libterraform/cli.py", "TerraformCommand"):
         assert f"::: libterraform.cli.TerraformCommand.{method}" in command_page
+
+    assert bad_state_identities_link not in command_page
+    assert bad_state_identities_link not in cli_source
 
     for phrase in [
         "#### 通用参数",
