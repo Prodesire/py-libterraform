@@ -55,6 +55,7 @@ def test_zensical_config_generates_api_docs_for_project_pages_url():
     assert project["docs_dir"] == "docs/en"
     assert project["site_dir"] == "site"
     assert project["edit_uri"] == "edit/main/docs/en/"
+    assert project["extra_javascript"] == ["assets/language-redirect.js"]
     assert {"TerraformCommand": "api/terraform-command.md"} in project["nav"][2][
         "API Reference"
     ]
@@ -72,7 +73,7 @@ def test_zensical_config_generates_api_docs_for_project_pages_url():
         },
         {
             "name": "中文",
-            "link": "https://prodesire.github.io/py-libterraform/zh/",
+            "link": "https://prodesire.github.io/py-libterraform/zh/?lang=zh",
             "lang": "zh",
         },
     ]
@@ -87,6 +88,7 @@ def test_chinese_zensical_config_uses_separate_language_site():
     assert project["docs_dir"] == "docs/zh"
     assert project["site_dir"] == "site/zh"
     assert project["edit_uri"] == "edit/main/docs/zh/"
+    assert project["extra_javascript"] == ["assets/language-redirect.js"]
     assert project["theme"]["language"] == "zh"
     assert "首页" in titles
     assert "安装" in titles
@@ -98,7 +100,7 @@ def test_chinese_zensical_config_uses_separate_language_site():
     assert project["extra"]["alternate"] == [
         {
             "name": "English",
-            "link": "https://prodesire.github.io/py-libterraform/",
+            "link": "https://prodesire.github.io/py-libterraform/?lang=en",
             "lang": "en",
         },
         {
@@ -107,6 +109,28 @@ def test_chinese_zensical_config_uses_separate_language_site():
             "lang": "zh",
         },
     ]
+
+
+def test_docs_language_redirect_script_detects_browser_language():
+    english_script = read_text("docs/en/assets/language-redirect.js")
+    chinese_script = read_text("docs/zh/assets/language-redirect.js")
+
+    assert chinese_script == english_script
+    assert 'var storageKey = "py-libterraform-docs-language"' in english_script
+    assert 'params.get("lang")' in english_script
+    assert (
+        "window.localStorage.setItem(storageKey, requestedLanguage)" in english_script
+    )
+    assert "navigator.languages" in english_script
+    assert "navigator.language" in english_script
+    assert "isEnglishRoot" in english_script
+    assert 'preferredLanguage === "en"' in english_script
+    assert 'language.indexOf("zh") === 0' in english_script
+    assert (
+        'window.location.replace(new URL("zh/", window.location.href).toString())'
+        in english_script
+    )
+    assert "/zh/" not in english_script.split("isEnglishRoot")[0]
 
 
 def test_readme_and_docs_remove_historical_memory_leak_notice():

@@ -7,6 +7,7 @@ repo_name = "Prodesire/py-libterraform"
 edit_uri = "edit/main/docs/en/"
 docs_dir = "docs/en"
 site_dir = "site"
+extra_javascript = ["assets/language-redirect.js"]
 nav = [
   { "Home" = "index.md" },
   { "Getting Started" = [
@@ -52,5 +53,5 @@ show_source = false
 [project.extra]
 alternate = [
   { name = "English", link = "https://prodesire.github.io/py-libterraform/", lang = "en" },
-  { name = "中文", link = "https://prodesire.github.io/py-libterraform/zh/", lang = "zh" },
+  { name = "中文", link = "https://prodesire.github.io/py-libterraform/zh/?lang=zh", lang = "zh" },
 ]
