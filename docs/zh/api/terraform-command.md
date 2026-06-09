@@ -242,6 +242,38 @@ Terraform 运行所需的全部本地数据（这些数据通常不提交到版�
 | `state` | `str` | 仅用于 local backend 的遗留选项。详见 local backend 文档。 | `None` |
 | `**options` | | 额外命令选项。 | |
 
+::: libterraform.cli.TerraformCommand.query
+    options:
+      heading_level: 3
+      show_root_full_path: false
+      show_docstring_description: false
+      show_docstring_parameters: false
+      show_docstring_returns: false
+      show_docstring_raises: false
+      show_docstring_warns: false
+      show_docstring_examples: false
+
+参考 <https://developer.hashicorp.com/terraform/cli/commands/query>
+
+执行实验性的 Terraform query 命令，根据 `.tfquery.hcl` 文件查询远端基础设施中
+匹配的资源。Terraform 1.13 起提供该命令，但只有启用 Terraform experimental
+features 时才会注册到 CLI。
+
+默认以 JSON 格式输出，并按 JSON 行流解析为 Python 列表。传入 `json=False`
+可获取原始文本。
+
+参数：
+
+| 参数 | 类型 | 说明 | 默认值 |
+|---|---|---|---|
+| `check` | `bool` | 是否检查返回码。 | `False` |
+| `json` | `bool` | 是否以 JSON 格式输出。 | `True` |
+| `vars` | `dict` | 设置 query 文件中的变量。 | `None` |
+| `var_files` | `List[str]` | 从给定文件加载变量值，追加到默认文件 `terraform.tfvars` 和 `*.auto.tfvars` 之上。 | `None` |
+| `generate_config_out` | `str` | 为查询到的资源生成 import 和 resource 配置。使用 JSON 输出时，生成内容会包含在 JSON 中；否则写入指定的新文件。 | `None` |
+| `no_color` | `bool` | 是否禁用颜色输出。 | `True` |
+| `**options` | | 额外命令选项。 | |
+
 ::: libterraform.cli.TerraformCommand.show
     options:
       heading_level: 3
@@ -1018,6 +1050,35 @@ serial 或不同的 state 文件世系，除非指定了 `force`。
 | `state` | `str` | state 文件路径。默认使用当前 workspace 的 state。 | `None` |
 | `**options` | | 额外命令选项。 | |
 
+::: libterraform.cli.TerraformCommand.stacks
+    options:
+      heading_level: 3
+      show_root_full_path: false
+      show_docstring_description: false
+      show_docstring_parameters: false
+      show_docstring_returns: false
+      show_docstring_raises: false
+      show_docstring_warns: false
+      show_docstring_examples: false
+
+参考 <https://developer.hashicorp.com/terraform/cli/commands/stacks>
+
+执行 Terraform Stacks 子命令。Terraform 1.13 起提供该命令；实际可用的
+subcommands 由 Stacks plugin 实现决定，可传入 `args=["-help"]` 查看当前环境
+支持的命令。
+
+该包装方法返回原始 stdout，不做 JSON 解析。
+
+参数：
+
+| 参数 | 类型 | 说明 | 默认值 |
+|---|---|---|---|
+| `args` | `Sequence[str]` | 传给 Stacks plugin 的参数列表。 | `None` |
+| `check` | `bool` | 是否检查返回码。 | `False` |
+| `no_color` | `bool` | 是否禁用颜色输出。 | `True` |
+| `plugin_cache_dir` | `str` | 覆盖 Stacks plugin 缓存目录。 | `None` |
+| `**options` | | 额外命令选项。 | |
+
 ::: libterraform.cli.TerraformCommand.taint
     options:
       heading_level: 3
@@ -1123,6 +1184,7 @@ Terraform 会在当前配置和测试目录中搜索 `.tftest.hcl` 文件，然�
 | `json` | `bool` | 是否以 JSON 格式输出。 | `True` |
 | `junit_xml` | `str` | 将 JUnit XML 测试报告写入指定文件。`junit_xml` 仅支持本地测试执行，不能与 `cloud_run` 同时使用。 | `None` |
 | `test_directory` | `str` | 设置 Terraform 测试目录，默认为 `"tests"`。 | `None` |
+| `run_parallelism` | `int` | 限制同一测试文件内可并行执行的 run block 数量，默认 10。 | `None` |
 | `verbose` | `bool` | 在每个测试运行块执行时打印 plan 或 state。 | `None` |
 | `**options` | | 额外命令选项。 | |
 

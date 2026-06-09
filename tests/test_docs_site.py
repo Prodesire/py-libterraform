@@ -111,6 +111,29 @@ def test_chinese_zensical_config_uses_separate_language_site():
     ]
 
 
+def test_docs_language_redirect_script_rewrites_local_alternate_links():
+    script = read_text("docs/en/assets/language-redirect.js")
+
+    assert 'var productionOrigin = "https://prodesire.github.io"' in script
+    assert 'var productionBasePath = "/py-libterraform"' in script
+    assert "function rewriteLanguageAlternates()" in script
+    assert "function isLocalPreview()" in script
+    assert "function currentPreviewPathname()" in script
+    assert "window.location.hostname" in script
+    assert "window.location.pathname" in script
+    assert 'hostname === "localhost"' in script
+    assert 'hostname === "127.0.0.1"' in script
+    assert 'hostname === "::1"' in script
+    assert "document.querySelectorAll" in script
+    assert 'a.md-select__link[href], link[rel="alternate"][href]' in script
+    assert 'node.getAttribute("hreflang")' in script
+    assert 'targetLanguage === "zh"' in script
+    assert 'targetLanguage === "en"' in script
+    assert 'targetPathname = "/zh" + targetPathname' in script
+    assert 'targetPathname = targetPathname.slice(3) || "/"' in script
+    assert "node.setAttribute" in script
+
+
 def test_docs_language_redirect_script_detects_browser_language():
     english_script = read_text("docs/en/assets/language-redirect.js")
     chinese_script = read_text("docs/zh/assets/language-redirect.js")
@@ -130,7 +153,7 @@ def test_docs_language_redirect_script_detects_browser_language():
         'window.location.replace(new URL("zh/", window.location.href).toString())'
         in english_script
     )
-    assert "/zh/" not in english_script.split("isEnglishRoot")[0]
+    assert "window.location.replace" not in english_script.split("isEnglishRoot")[0]
 
 
 def test_readme_and_docs_remove_historical_memory_leak_notice():
@@ -153,6 +176,30 @@ def test_readme_and_docs_provide_chinese_content():
     assert "English" in chinese_readme
     assert "## 安装" in chinese_readme
     assert "## 使用" in chinese_readme
+
+
+def test_readmes_do_not_include_current_compatibility_section():
+    readme = read_text("README.md")
+    chinese_readme = read_text("README.zh-CN.md")
+
+    assert "## Compatibility" not in readme
+    assert "## 兼容性" not in chinese_readme
+    assert "0.13.0 bundles Terraform 1.13.5" not in readme
+    assert "0.13.0 内置 Terraform 1.13.5" not in chinese_readme
+
+
+def test_docs_include_0_13_version_mapping():
+    english_index = read_text("docs/en/index.md")
+    chinese_index = read_text("docs/zh/index.md")
+    english_policy = read_text("docs/en/release-policy.md")
+    chinese_policy = read_text("docs/zh/release-policy.md")
+
+    for page in [english_index, chinese_index]:
+        assert "libterraform/0.13.0/" in page
+        assert "terraform/tree/v1.13.5" in page
+
+    assert "`0.13.x` | `1.13.x` | `release/0.13`" in english_policy
+    assert "`0.13.x` | `1.13.x` | `release/0.13`" in chinese_policy
 
 
 def test_chinese_docs_cover_public_python_interfaces():
@@ -204,12 +251,19 @@ def test_chinese_api_reference_has_method_descriptions_and_parameters():
         "`identity_id`",
         "`cloud_run`",
         "`junit_xml`",
+        "`run_parallelism`",
         "`test_directory`",
+        "`plugin_cache_dir`",
+        "`generate_config_out`",
         "Terraform 1.11 起支持人类可读输出",
         "Terraform 1.12 起提供该命令",
+        "Terraform 1.13 起提供该命令",
         "传入 `json=False` 可获取原始文本",
         "将 JUnit XML 测试报告写入指定文件",
         "`junit_xml` 仅支持本地测试执行，不能与 `cloud_run` 同时使用",
+        "限制同一测试文件内可并行执行的 run block 数量",
+        "执行 Terraform Stacks 子命令",
+        "执行实验性的 Terraform query 命令",
     ]:
         assert phrase in command_page
 

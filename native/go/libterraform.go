@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/terraform/internal/getproviders"
 	"github.com/hashicorp/terraform/internal/httpclient"
 	"github.com/hashicorp/terraform/internal/logging"
+	"github.com/hashicorp/terraform/internal/rpcapi"
 	"github.com/hashicorp/terraform/internal/terminal"
 	"github.com/hashicorp/terraform/version"
 	"github.com/mitchellh/colorstring"
@@ -644,6 +645,13 @@ func NewCommands(meta command.Meta) map[string]cli.CommandFactory {
 			}, nil
 		},
 
+		// "rpcapi" bypasses the regular CLI command package so wrapping
+		// automation can use a direct Terraform Core RPC interface.
+		"rpcapi": rpcapi.CLICommandFactory(rpcapi.CommandFactoryOpts{
+			ExperimentsAllowed: meta.AllowExperimentalFeatures,
+			ShutdownCh:         meta.ShutdownCh,
+		}),
+
 		"show": func() (cli.Command, error) {
 			return &command.ShowCommand{
 				Meta: meta,
@@ -787,6 +795,20 @@ func NewCommands(meta command.Meta) map[string]cli.CommandFactory {
 				},
 			}, nil
 		},
+
+		"stacks": func() (cli.Command, error) {
+			return &command.StacksCommand{
+				Meta: meta,
+			}, nil
+		},
+	}
+
+	if meta.AllowExperimentalFeatures {
+		commands["query"] = func() (cli.Command, error) {
+			return &command.QueryCommand{
+				Meta: meta,
+			}, nil
+		}
 	}
 
 	PrimaryCommands = []string{
@@ -801,6 +823,7 @@ func NewCommands(meta command.Meta) map[string]cli.CommandFactory {
 		"env":             struct{}{},
 		"internal-plugin": struct{}{},
 		"push":            struct{}{},
+		"rpcapi":          struct{}{},
 	}
 
 	return commands

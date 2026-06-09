@@ -11,6 +11,11 @@ class TestTerraformCommandTest:
 
         assert "junit_xml" in params
 
+    def test_test_declares_run_parallelism_option(self):
+        params = inspect.signature(TerraformCommand.test).parameters
+
+        assert "run_parallelism" in params
+
     def test_test_accepts_junit_xml_option(self, monkeypatch):
         call = {}
 
@@ -34,6 +39,31 @@ class TestTerraformCommandTest:
         assert r.json is True
         assert call["cmd"] == "test"
         assert call["options"]["junit_xml"] == "report.xml"
+        assert call["chdir"] == "/work"
+
+    def test_test_accepts_run_parallelism_option(self, monkeypatch):
+        call = {}
+
+        def fake_run(cmd, args=None, options=None, chdir=None, check=False, json=False):
+            call.update(
+                cmd=cmd,
+                args=args,
+                options=options,
+                chdir=chdir,
+                check=check,
+                json=json,
+            )
+            return 0, '{"type":"test_summary","test_summary":{"status":"pass"}}', ""
+
+        monkeypatch.setattr(TerraformCommand, "run", staticmethod(fake_run))
+
+        cli = TerraformCommand("/work")
+        r = cli.test(run_parallelism=4, json=True)
+
+        assert r.retcode == 0
+        assert r.json is True
+        assert call["cmd"] == "test"
+        assert call["options"]["run_parallelism"] == 4
         assert call["chdir"] == "/work"
 
     def test_test(self, cli: TerraformCommand):

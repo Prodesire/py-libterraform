@@ -434,6 +434,47 @@ class TerraformCommand:
         value = json_loads(stdout, split=True) if json else stdout
         return CommandResult(retcode, value, stderr, json=json)
 
+    def query(
+        self,
+        check: bool = False,
+        json: bool = True,
+        vars: dict = None,
+        var_files: List[str] = None,
+        generate_config_out: str = None,
+        no_color: bool = True,
+        **options,
+    ) -> CommandResult:
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/query
+
+        Queries remote infrastructure for resources using .tfquery.hcl files.
+
+        Terraform 1.13 registers this command only when experimental features
+        are enabled.
+
+        By default, this assumes you want to get json output.
+
+        :param check: Whether to check return code.
+        :param json: Whether to load stdout as json.
+        :param vars: Set variables in the query file of the configuration.
+        :param var_files: Load variable values from the given files, in addition
+            to the default files terraform.tfvars and *.auto.tfvars.
+        :param generate_config_out: Instructs Terraform to generate import and
+            resource blocks for found results.
+        :param no_color: True to output not contain any color.
+        :param options: More command options.
+        """
+        options.update(
+            var=vars,
+            var_file=var_files,
+            generate_config_out=generate_config_out,
+            no_color=flag(no_color),
+        )
+        retcode, stdout, stderr = self.run(
+            "query", options=options, chdir=self.cwd, check=check, json=json
+        )
+        value = json_loads(stdout, split=True) if json else stdout
+        return CommandResult(retcode, value, stderr, json=json)
+
     def show(
         self,
         path: str = None,
@@ -1556,6 +1597,35 @@ class TerraformCommand:
             "show", args=[addr], check=check, no_color=no_color, **options
         )
 
+    def stacks(
+        self,
+        args: Sequence[str] = None,
+        check: bool = False,
+        no_color: bool = True,
+        plugin_cache_dir: str = None,
+        **options,
+    ) -> CommandResult:
+        """Refer to https://developer.hashicorp.com/terraform/cli/commands/stacks
+
+        Executes Terraform Stacks subcommands.
+
+        The available subcommands depend on the Stacks plugin implementation.
+
+        :param args: Args for the Stacks plugin command.
+        :param check: Whether to check return code.
+        :param no_color: True to output not contain any color.
+        :param plugin_cache_dir: Override the Stacks plugin cache directory.
+        :param options: More command options.
+        """
+        options.update(
+            no_color=flag(no_color),
+            plugin_cache_dir=plugin_cache_dir,
+        )
+        retcode, stdout, stderr = self.run(
+            "stacks", args=args, options=options, chdir=self.cwd, check=check
+        )
+        return CommandResult(retcode, stdout, stderr)
+
     def taint(
         self,
         addr: str,
@@ -1676,6 +1746,7 @@ class TerraformCommand:
         json: bool = True,
         junit_xml: str = None,
         test_directory: str = None,
+        run_parallelism: int = None,
         verbose: bool = None,
         **options,
     ):
@@ -1710,6 +1781,8 @@ class TerraformCommand:
         :param json: Whether to load stdout as json.
         :param junit_xml: Write a JUnit XML test report to the given file.
         :param test_directory: Set the Terraform test directory, defaults to "tests".
+        :param run_parallelism: Limit the number of test runs that can execute
+            in parallel within a file. Defaults to 10.
         :param verbose: Print the plan or state for each test run block as it
             executes.
         :param options: More command options.
@@ -1722,6 +1795,7 @@ class TerraformCommand:
             filter=filter,
             junit_xml=junit_xml,
             test_directory=test_directory,
+            run_parallelism=run_parallelism,
             verbose=flag(verbose),
         )
         retcode, stdout, stderr = self.run(
