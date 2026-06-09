@@ -10,8 +10,10 @@ def test_native_bridge_registers_current_terraform_commands():
     assert '"rpcapi": rpcapi.CLICommandFactory' in source
     assert '"stacks": func() (cli.Command, error)' in source
     assert "command.StacksCommand" in source
-    assert 'commands["query"] = func() (cli.Command, error)' in source
+    assert '"query": func() (cli.Command, error)' in source
     assert "command.QueryCommand" in source
+    assert 'commands["test cleanup"] = func() (cli.Command, error)' in source
+    assert "command.TestCleanupCommand" in source
 
 
 def test_native_bridge_exposes_per_run_cancellation():

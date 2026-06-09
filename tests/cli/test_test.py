@@ -16,6 +16,14 @@ class TestTerraformCommandTest:
 
         assert "run_parallelism" in params
 
+    def test_test_declares_allow_deferral_option(self):
+        params = inspect.signature(TerraformCommand.test).parameters
+
+        assert "allow_deferral" in params
+
+    def test_test_cleanup_is_not_exposed_for_final_terraform_releases(self):
+        assert not hasattr(TerraformCommand, "test_cleanup")
+
     def test_test_accepts_junit_xml_option(self, monkeypatch):
         call = {}
 
@@ -64,6 +72,31 @@ class TestTerraformCommandTest:
         assert r.json is True
         assert call["cmd"] == "test"
         assert call["options"]["run_parallelism"] == 4
+        assert call["chdir"] == "/work"
+
+    def test_test_accepts_allow_deferral_option(self, monkeypatch):
+        call = {}
+
+        def fake_run(cmd, args=None, options=None, chdir=None, check=False, json=False):
+            call.update(
+                cmd=cmd,
+                args=args,
+                options=options,
+                chdir=chdir,
+                check=check,
+                json=json,
+            )
+            return 0, '{"type":"test_summary","test_summary":{"status":"pass"}}', ""
+
+        monkeypatch.setattr(TerraformCommand, "run", staticmethod(fake_run))
+
+        cli = TerraformCommand("/work")
+        r = cli.test(allow_deferral=True, json=True)
+
+        assert r.retcode == 0
+        assert r.json is True
+        assert call["cmd"] == "test"
+        assert call["options"]["allow_deferral"] is ...
         assert call["chdir"] == "/work"
 
     def test_test(self, cli: TerraformCommand):

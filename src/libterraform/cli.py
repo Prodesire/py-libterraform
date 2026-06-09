@@ -231,6 +231,7 @@ class TerraformCommand:
         lockfile: str = None,
         ignore_remote_version: bool = None,
         test_directory: str = None,
+        enable_pluggable_state_storage_experiment: bool = None,
         **options,
     ) -> CommandResult:
         """Refer to https://developer.hashicorp.com/terraform/cli/commands/init
@@ -289,6 +290,8 @@ class TerraformCommand:
             See the documentation on configuring Terraform with
             HCP Terraform or Terraform Enterprise for more information.
         :param test_directory: Set the Terraform test directory, defaults to "tests".
+        :param enable_pluggable_state_storage_experiment: Enable Terraform's
+            experimental pluggable state storage initialization path.
         :param options: More command options.
         """
         options.update(
@@ -308,6 +311,9 @@ class TerraformCommand:
             lockfile=lockfile,
             ignore_remote_version=flag(ignore_remote_version),
             test_directory=test_directory,
+            enable_pluggable_state_storage_experiment=flag(
+                enable_pluggable_state_storage_experiment
+            ),
         )
         retcode, stdout, stderr = self.run(
             "init", options=options, chdir=self.cwd, check=check
@@ -321,6 +327,7 @@ class TerraformCommand:
         no_color: bool = True,
         no_test: bool = None,
         test_directory: str = None,
+        query: bool = None,
         **options,
     ) -> CommandResult:
         """Refer to https://developer.hashicorp.com/terraform/cli/commands/validate
@@ -354,12 +361,14 @@ class TerraformCommand:
         :param no_color: True to output not contain any color.
         :param no_test: If specified, Terraform will not validate test files.
         :param test_directory: Set the Terraform test directory, defaults to "tests".
+        :param query: If specified, Terraform will also validate .tfquery.hcl files.
         :param options: More command options.
         """
         options.update(
             no_color=flag(no_color),
             no_test=flag(no_test),
             test_directory=test_directory,
+            query=flag(query),
         )
         retcode, stdout, stderr = self.run(
             "validate", options=options, chdir=self.cwd, check=check, json=json
@@ -1792,6 +1801,7 @@ class TerraformCommand:
         test_directory: str = None,
         run_parallelism: int = None,
         verbose: bool = None,
+        allow_deferral: bool = None,
         **options,
     ):
         """Refer to https://developer.hashicorp.com/terraform/cli/commands/test
@@ -1829,6 +1839,8 @@ class TerraformCommand:
             in parallel within a file. Defaults to 10.
         :param verbose: Print the plan or state for each test run block as it
             executes.
+        :param allow_deferral: Allow deferred actions during test operations.
+            Terraform accepts this flag only in experimental builds.
         :param options: More command options.
         """
         options.update(
@@ -1841,6 +1853,7 @@ class TerraformCommand:
             test_directory=test_directory,
             run_parallelism=run_parallelism,
             verbose=flag(verbose),
+            allow_deferral=flag(allow_deferral),
         )
         retcode, stdout, stderr = self.run(
             "test", options=options, chdir=self.cwd, check=check, json=json
