@@ -46,10 +46,19 @@ import "C"
 // CLI
 // **********************************************
 
+const cancelledBeforeStartExitCode = 130
+
 var runCliMu sync.Mutex
 var shutdownChsMu sync.Mutex
 var shutdownChs = make(map[chan struct{}]struct{})
+var cancelableRunsMu sync.Mutex
+var cancelableRuns = make(map[string]*cancelableRun)
 var logFile *os.File
+
+type cancelableRun struct {
+	shutdownCh chan struct{}
+	cancelled  bool
+}
 
 func init() {
 	signalCh := make(chan os.Signal, 4)
@@ -69,11 +78,95 @@ func init() {
 	}()
 }
 
+func registerCancelableRun(runID string) *cancelableRun {
+	if runID == "" {
+		return nil
+	}
+
+	run := &cancelableRun{
+		shutdownCh: make(chan struct{}, 2),
+	}
+	cancelableRunsMu.Lock()
+	cancelableRuns[runID] = run
+	cancelableRunsMu.Unlock()
+	return run
+}
+
+func unregisterCancelableRun(runID string, run *cancelableRun) {
+	if run == nil {
+		return
+	}
+
+	cancelableRunsMu.Lock()
+	if cancelableRuns[runID] == run {
+		delete(cancelableRuns, runID)
+	}
+	close(run.shutdownCh)
+	cancelableRunsMu.Unlock()
+}
+
+func cancelableRunCancelled(run *cancelableRun) bool {
+	if run == nil {
+		return false
+	}
+
+	cancelableRunsMu.Lock()
+	defer cancelableRunsMu.Unlock()
+	return run.cancelled
+}
+
+//export CancelCli
+func CancelCli(cRunID *C.char) C.int {
+	runID := C.GoString(cRunID)
+	if runID == "" {
+		return 0
+	}
+
+	cancelableRunsMu.Lock()
+	defer cancelableRunsMu.Unlock()
+	run, ok := cancelableRuns[runID]
+	if !ok {
+		return 0
+	}
+
+	run.cancelled = true
+	select {
+	case run.shutdownCh <- struct{}{}:
+	default:
+	}
+	return 1
+}
+
 //export RunCli
 func RunCli(cArgc C.int, cArgv **C.char, cStdOutFd C.int, cStdErrFd C.int) C.int {
+	return runCli("", cArgc, cArgv, cStdOutFd, cStdErrFd)
+}
+
+//export RunCliWithCancel
+func RunCliWithCancel(cRunID *C.char, cArgc C.int, cArgv **C.char, cStdOutFd C.int, cStdErrFd C.int) C.int {
+	return runCli(C.GoString(cRunID), cArgc, cArgv, cStdOutFd, cStdErrFd)
+}
+
+func runCli(runID string, cArgc C.int, cArgv **C.char, cStdOutFd C.int, cStdErrFd C.int) C.int {
 	// Terraform's CLI path still relies on process-wide state such as the
 	// current working directory, stdio, checkpoint state, and plugin cleanup.
 	// Serialize calls so Python threads can safely share this library.
+	cancelableRun := registerCancelableRun(runID)
+	var shutdownCh chan struct{}
+	var shutdownChRegistered bool
+	defer func() {
+		if shutdownChRegistered {
+			shutdownChsMu.Lock()
+			delete(shutdownChs, shutdownCh)
+			shutdownChsMu.Unlock()
+		}
+		if cancelableRun != nil {
+			unregisterCancelableRun(runID, cancelableRun)
+		} else if shutdownCh != nil {
+			close(shutdownCh)
+		}
+	}()
+
 	runCliMu.Lock()
 	defer runCliMu.Unlock()
 	defer logging.PanicHandler()
@@ -93,8 +186,6 @@ func RunCli(cArgc C.int, cArgv **C.char, cStdOutFd C.int, cStdErrFd C.int) C.int
 		arg := C.GoString(s)
 		os.Args = append(os.Args, arg)
 	}
-
-	// Override stdout and stdin by given std fd
 
 	Stdout := os.NewFile(uintptr(cStdOutFd), "libterraform/pipe/stdout")
 	Stderr := os.NewFile(uintptr(cStdErrFd), "libterraform/pipe/stderr")
@@ -122,6 +213,14 @@ func RunCli(cArgc C.int, cArgv **C.char, cStdOutFd C.int, cStdErrFd C.int) C.int
 			<-checkpointResult
 		}
 	}()
+
+	if cancelableRunCancelled(cancelableRun) {
+		// The async caller can cancel while this run is still waiting for
+		// runCliMu. Terraform has not started yet, but Python still needs this
+		// call to close its stdout/stderr pipes and return a deterministic code.
+		// 130 follows the common shell convention for an interrupted command.
+		return cancelledBeforeStartExitCode
+	}
 
 	err = openTelemetryInit()
 	if err != nil {
@@ -293,16 +392,14 @@ func RunCli(cArgc C.int, cArgv **C.char, cStdOutFd C.int, cStdErrFd C.int) C.int
 	// they should primarily be working with the override working directory
 	// that we've now switched to above.
 
-	shutdownCh := make(chan struct{}, 2)
+	shutdownCh = make(chan struct{}, 2)
+	if cancelableRun != nil {
+		shutdownCh = cancelableRun.shutdownCh
+	}
 	shutdownChsMu.Lock()
 	shutdownChs[shutdownCh] = struct{}{}
 	shutdownChsMu.Unlock()
-	defer func() {
-		shutdownChsMu.Lock()
-		delete(shutdownChs, shutdownCh)
-		shutdownChsMu.Unlock()
-		close(shutdownCh)
-	}()
+	shutdownChRegistered = true
 	meta := NewMeta(originalWd, streams, config, services, providerSrc, providerDevOverrides, unmanagedProviders, shutdownCh, ctx)
 	commands := NewCommands(meta)
 

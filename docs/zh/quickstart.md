@@ -2,7 +2,7 @@
 
 ## 执行 Terraform 命令
 
-为一个 Terraform 模块目录创建命令包装器：
+为一个 Terraform 模块目录创建 `TerraformCommand` 实例：
 
 ```python
 from libterraform import TerraformCommand
@@ -49,7 +49,7 @@ plan = cli.plan(
 )
 ```
 
-包装器会把下划线转换为连字符，因此 `detailed_exitcode` 会映射为
+`TerraformCommand` 会把下划线转换为连字符，因此 `detailed_exitcode` 会映射为
 `-detailed-exitcode`。
 
 ## 解析 Terraform 配置
@@ -64,5 +64,21 @@ module, diagnostics = TerraformConfig.load_config_dir("path/to/terraform/module"
 print(module["ManagedResources"].keys())
 print(diagnostics)
 ```
+
+## 使用 asyncio
+
+当 asyncio 应用需要等待 Terraform 操作且不阻塞 event loop 时，可以使用
+`AsyncTerraformCommand`：
+
+```python
+from libterraform import AsyncTerraformCommand
+
+cli = AsyncTerraformCommand("path/to/terraform/module")
+validation = await cli.validate(check=True)
+```
+
+Terraform CLI 执行在共享库内部仍会串行化。如需真正并行的 Terraform 操作，请使用
+多个进程隔离。取消 coroutine 会请求 Terraform 进入协作式 shutdown 流程，但不会
+直接终止 worker thread。
 
 完整接口见 [API 参考](api/index.md)。

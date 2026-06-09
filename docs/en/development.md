@@ -69,13 +69,13 @@ Or use Make:
 make test
 ```
 
-Run static checks:
+Run Python static checks and Go bridge formatting checks:
 
 ```bash
 make lint
 ```
 
-Format Python files:
+Format Python files and project-owned Go bridge files:
 
 ```bash
 make format
@@ -149,5 +149,5 @@ submodules.
 
 If Terraform command tests fail with provider or state output differences, run
 the single failing test with `-vv` and check `CommandResult.error` or captured
-stderr. The Python wrappers mostly translate arguments and parse stdout; the
+stderr. The Python command APIs mostly translate arguments and parse stdout; the
 underlying behavior is Terraform's.

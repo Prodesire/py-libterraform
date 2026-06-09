@@ -3,7 +3,7 @@
 包根路径导出以下公开接口：
 
 ```python
-from libterraform import TerraformCommand, TerraformConfig
+from libterraform import AsyncTerraformCommand, TerraformCommand, TerraformConfig
 ```
 
 异常类位于 `libterraform.exceptions`。
@@ -12,6 +12,8 @@ from libterraform import TerraformCommand, TerraformConfig
 
 - [TerraformCommand](terraform-command.md)：命令执行、`CommandResult`、
   参数转换、JSON 解析和 Terraform CLI 辅助方法。
+- [AsyncTerraformCommand](async-terraform-command.md)：面向 asyncio 应用的异步
+  兼容命令执行。
 - [TerraformConfig](terraform-config.md)：Terraform 配置解析。
 - [异常](exceptions.md)：包内异常类型。
 

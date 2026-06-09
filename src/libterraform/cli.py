@@ -1,5 +1,6 @@
 import os
-from ctypes import POINTER, c_char_p, c_int64
+from contextvars import ContextVar
+from ctypes import POINTER, c_char_p, c_int, c_int64
 from threading import Thread
 from typing import List, Optional, Sequence, Tuple, Union
 
@@ -9,6 +10,30 @@ from libterraform.exceptions import TerraformCommandError, TerraformFdReadError
 
 _run_cli = _lib_tf.RunCli
 _run_cli.argtypes = [c_int64, POINTER(c_char_p), c_int64, c_int64]
+_run_cli_with_cancel = getattr(_lib_tf, "RunCliWithCancel", None)
+if _run_cli_with_cancel is not None:
+    _run_cli_with_cancel.argtypes = [
+        c_char_p,
+        c_int64,
+        POINTER(c_char_p),
+        c_int64,
+        c_int64,
+    ]
+_cancel_cli = getattr(_lib_tf, "CancelCli", None)
+if _cancel_cli is not None:
+    _cancel_cli.argtypes = [c_char_p]
+    _cancel_cli.restype = c_int
+
+_current_run_id: ContextVar[Optional[str]] = ContextVar(
+    "libterraform_current_run_id",
+    default=None,
+)
+
+
+def _cancel_cli_run(run_id: str) -> int:
+    if not run_id or _cancel_cli is None:
+        return 0
+    return _cancel_cli(run_id.encode("utf-8"))
 
 
 def flag(value):
@@ -121,14 +146,33 @@ class TerraformCommand:
         stderr_thread.daemon = True
         stderr_thread.start()
 
+        run_id = _current_run_id.get()
         if WINDOWS:
             import msvcrt
 
             w_stdout_handle = msvcrt.get_osfhandle(w_stdout_fd)
             w_stderr_handle = msvcrt.get_osfhandle(w_stderr_fd)
-            retcode = _run_cli(argc, c_argv, w_stdout_handle, w_stderr_handle)
+            if run_id and _run_cli_with_cancel is not None:
+                retcode = _run_cli_with_cancel(
+                    run_id.encode("utf-8"),
+                    argc,
+                    c_argv,
+                    w_stdout_handle,
+                    w_stderr_handle,
+                )
+            else:
+                retcode = _run_cli(argc, c_argv, w_stdout_handle, w_stderr_handle)
         else:
-            retcode = _run_cli(argc, c_argv, w_stdout_fd, w_stderr_fd)
+            if run_id and _run_cli_with_cancel is not None:
+                retcode = _run_cli_with_cancel(
+                    run_id.encode("utf-8"),
+                    argc,
+                    c_argv,
+                    w_stdout_fd,
+                    w_stderr_fd,
+                )
+            else:
+                retcode = _run_cli(argc, c_argv, w_stdout_fd, w_stderr_fd)
 
         stdout_thread.join()
         stderr_thread.join()

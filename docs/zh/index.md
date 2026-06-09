@@ -6,6 +6,8 @@
 ## 提供能力
 
 - `TerraformCommand`：从 Python 调用 Terraform 命令。
+- `AsyncTerraformCommand`：在 asyncio 应用中等待 Terraform 命令，同时避免阻塞
+  event loop。
 - `TerraformConfig`：把 `.tf` 和 `.tf.json` 文件加载为 Terraform 内部模块表示。
 - 预构建 wheel 内包含 Terraform 共享库，调用方通常不需要在 `PATH` 中额外安装
   `terraform` 可执行文件。
@@ -40,6 +42,10 @@
 `TerraformCommand` 可以被多个 Python 线程安全调用，但 Terraform CLI 会在共享库
 内部串行执行。Terraform 仍使用当前工作目录、stdio、checkpoint 状态和 plugin
 client 清理等进程级全局状态，因此真正并行的 Terraform 操作需要使用多个进程隔离。
+
+`AsyncTerraformCommand` 也遵循同样的 Terraform 执行约束。它让同步 API 可以在
+asyncio 应用中被 `await`，但不会让同一个 Python 进程内的 Terraform CLI 执行变成
+真正并行。
 
 Terraform 操作仍可能影响真实基础设施，因此执行 `apply`、`destroy`、状态命令、
 导入和测试时，应保持与直接使用 Terraform CLI 相同的谨慎程度。

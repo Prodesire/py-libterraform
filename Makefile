@@ -3,6 +3,7 @@ export PYTHONDONTWRITEBYTECODE=1
 TEST_PATH=./tests
 UV_PYTHON_FLAG=$(if $(PY),--python $(PY),)
 PYTHON_CHECK_PATHS=src tests scripts
+GO_CHECK_PATHS=native/go
 GIT_HOOKS_PATH=scripts/git-hooks
 DOCS_PORT?=8000
 
@@ -19,9 +20,14 @@ install: ## Install dependencies and Git hooks
 test: clean ## Run pytest (run `make build` first)
 	uv run $(UV_PYTHON_FLAG) pytest --color=yes $(TEST_PATH)
 
-lint: ## Run Ruff and ty checks
+lint: ## Run Ruff, ty, and Go formatting checks
 	uv run $(UV_PYTHON_FLAG) ruff check $(PYTHON_CHECK_PATHS)
 	uv run $(UV_PYTHON_FLAG) ty check $(PYTHON_CHECK_PATHS)
+	@files="$$(gofmt -l $(GO_CHECK_PATHS))"; \
+	if [ -n "$$files" ]; then \
+		echo "$$files"; \
+		exit 1; \
+	fi
 
 build: ## Build libterraform
 	uv build --wheel $(UV_PYTHON_FLAG)
@@ -46,6 +52,7 @@ clean: ## Remove python and build artifacts
 	rm -rf build dist *.egg-info .eggs
 	find . -name '*.h' -exec rm -f {} +
 
-format: ## Format Python files with Ruff
+format: ## Format Python and Go files
 	uv run $(UV_PYTHON_FLAG) ruff check --fix $(PYTHON_CHECK_PATHS)
 	uv run $(UV_PYTHON_FLAG) ruff format $(PYTHON_CHECK_PATHS)
+	gofmt -w $(GO_CHECK_PATHS)

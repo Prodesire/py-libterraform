@@ -41,6 +41,16 @@ cli.plan(check=True)
 module, diagnostics = TerraformConfig.load_config_dir("path/to/module")
 ```
 
+asyncio 应用可以使用 `AsyncTerraformCommand` 等待 Terraform 操作，同时避免阻塞
+event loop：
+
+```python
+from libterraform import AsyncTerraformCommand
+
+cli = AsyncTerraformCommand("path/to/module")
+await cli.validate(check=True)
+```
+
 ## 贡献
 
 安装 [uv](https://docs.astral.sh/uv/getting-started/installation/)，然后：

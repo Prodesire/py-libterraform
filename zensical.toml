@@ -17,6 +17,7 @@ nav = [
   { "API Reference" = [
     { "Overview" = "api/index.md" },
     { "TerraformCommand" = "api/terraform-command.md" },
+    { "AsyncTerraformCommand" = "api/async-terraform-command.md" },
     { "TerraformConfig" = "api/terraform-config.md" },
     { "Exceptions" = "api/exceptions.md" },
   ] },

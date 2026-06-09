@@ -59,6 +59,9 @@ def test_zensical_config_generates_api_docs_for_project_pages_url():
     assert {"TerraformCommand": "api/terraform-command.md"} in project["nav"][2][
         "API Reference"
     ]
+    assert {"AsyncTerraformCommand": "api/async-terraform-command.md"} in project[
+        "nav"
+    ][2]["API Reference"]
 
     python_handler = project["plugins"]["mkdocstrings"]["handlers"]["python"]
     assert python_handler["paths"] == ["src"]
@@ -205,11 +208,15 @@ def test_docs_include_0_13_version_mapping():
 def test_chinese_docs_cover_public_python_interfaces():
     index_page = read_text("docs/zh/index.md")
     command_page = read_text("docs/zh/api/terraform-command.md")
+    async_command_page = read_text("docs/zh/api/async-terraform-command.md")
     config_page = read_text("docs/zh/api/terraform-config.md")
     exceptions_page = read_text("docs/zh/api/exceptions.md")
 
     assert "Python 绑定" in index_page
     assert "::: libterraform.cli.TerraformCommand" in command_page
+    assert "::: libterraform.async_cli.AsyncTerraformCommand" in async_command_page
+    assert "asyncio 兼容" in async_command_page
+    assert "协作式取消" in async_command_page
     assert "show_docstring_description: false" in command_page
     assert "show_docstring_parameters: false" in command_page
     assert "show_docstring_returns: false" in command_page
@@ -313,10 +320,14 @@ def test_docs_dependency_group_declares_zensical_toolchain():
 
 def test_api_reference_pages_generate_public_python_interfaces():
     command_page = read_text("docs/en/api/terraform-command.md")
+    async_command_page = read_text("docs/en/api/async-terraform-command.md")
     config_page = read_text("docs/en/api/terraform-config.md")
     exceptions_page = read_text("docs/en/api/exceptions.md")
 
     assert "::: libterraform.cli.TerraformCommand" in command_page
+    assert "::: libterraform.async_cli.AsyncTerraformCommand" in async_command_page
+    assert "asyncio-compatible" in async_command_page
+    assert "cooperative cancellation" in async_command_page
     assert "load_config_dir" in config_page
     assert "TerraformCommandError" in exceptions_page
 

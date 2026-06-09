@@ -42,6 +42,16 @@ cli.plan(check=True)
 module, diagnostics = TerraformConfig.load_config_dir("path/to/module")
 ```
 
+Asyncio applications can use `AsyncTerraformCommand` to await Terraform
+operations without blocking the event loop:
+
+```python
+from libterraform import AsyncTerraformCommand
+
+cli = AsyncTerraformCommand("path/to/module")
+await cli.validate(check=True)
+```
+
 ## Contributing
 
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then:

@@ -14,6 +14,7 @@ _free.argtypes = [c_void_p]
 
 # Import after loading the shared library; these modules import _lib_tf above.
 from .cli import TerraformCommand  # noqa: E402
+from .async_cli import AsyncTerraformCommand  # noqa: E402
 from .config import TerraformConfig  # noqa: E402
 
-__all__ = ["TerraformCommand", "TerraformConfig"]
+__all__ = ["AsyncTerraformCommand", "TerraformCommand", "TerraformConfig"]

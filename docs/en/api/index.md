@@ -3,7 +3,7 @@
 The public package exports:
 
 ```python
-from libterraform import TerraformCommand, TerraformConfig
+from libterraform import AsyncTerraformCommand, TerraformCommand, TerraformConfig
 ```
 
 Exception classes are available from `libterraform.exceptions`.
@@ -13,6 +13,8 @@ Exception classes are available from `libterraform.exceptions`.
 - [TerraformCommand](terraform-command.md) covers command execution,
   `CommandResult`, option conversion, JSON parsing, and Terraform CLI helper
   methods.
+- [AsyncTerraformCommand](async-terraform-command.md) covers asyncio-compatible
+  command execution for asyncio applications.
 - [TerraformConfig](terraform-config.md) covers Terraform configuration parsing.
 - [Exceptions](exceptions.md) covers package exception types.
 

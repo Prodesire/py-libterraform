@@ -2,7 +2,7 @@
 
 ## Run Terraform Commands
 
-Create a command wrapper for a Terraform module directory:
+Create a `TerraformCommand` for a Terraform module directory:
 
 ```python
 from libterraform import TerraformCommand
@@ -49,7 +49,7 @@ plan = cli.plan(
 )
 ```
 
-The wrapper converts underscores to hyphens, so `detailed_exitcode` maps to
+`TerraformCommand` converts underscores to hyphens, so `detailed_exitcode` maps to
 `-detailed-exitcode`.
 
 ## Parse Terraform Configuration
@@ -65,5 +65,22 @@ module, diagnostics = TerraformConfig.load_config_dir("path/to/terraform/module"
 print(module["ManagedResources"].keys())
 print(diagnostics)
 ```
+
+## Use Asyncio
+
+Use `AsyncTerraformCommand` when an asyncio application needs to await
+Terraform operations without blocking the event loop:
+
+```python
+from libterraform import AsyncTerraformCommand
+
+cli = AsyncTerraformCommand("path/to/terraform/module")
+validation = await cli.validate(check=True)
+```
+
+Terraform CLI execution is still serialized inside the shared library. Use
+separate processes for true parallel Terraform operations.
+Cancelling the coroutine requests Terraform's cooperative shutdown path; it
+does not terminate the worker thread directly.
 
 See the [API Reference](api/index.md) for generated interface documentation.

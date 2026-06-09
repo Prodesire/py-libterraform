@@ -7,6 +7,8 @@ parsing Terraform configuration directories.
 ## What It Provides
 
 - `TerraformCommand` for invoking Terraform commands from Python.
+- `AsyncTerraformCommand` for awaiting Terraform commands in asyncio
+  applications without blocking the event loop.
 - `TerraformConfig` for loading `.tf` and `.tf.json` files into Terraform's
   internal module representation.
 - Wheels that include the Terraform shared library, so callers do not need a
@@ -43,6 +45,10 @@ CLI execution is serialized inside the shared library. Terraform still uses
 process-wide state such as the current working directory, stdio, checkpoint
 state, and plugin client cleanup, so true parallel Terraform operations require
 separate processes.
+
+`AsyncTerraformCommand` has the same Terraform execution constraint. It makes
+the synchronous API awaitable for asyncio applications, but it does not make
+Terraform CLI execution parallel inside one Python process.
 
 Terraform operations can still affect real infrastructure, so use `apply`,
 `destroy`, state commands, imports, and tests with the same caution as the

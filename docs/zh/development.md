@@ -66,13 +66,13 @@ uv run pytest --color=yes
 make test
 ```
 
-运行静态检查：
+运行 Python 静态检查和 Go 桥接代码格式检查：
 
 ```bash
 make lint
 ```
 
-格式化 Python 文件：
+格式化 Python 文件和项目自有 Go 桥接文件：
 
 ```bash
 make format
