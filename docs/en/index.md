@@ -37,6 +37,12 @@ parsing Terraform configuration directories.
 
 ## Runtime Constraints
 
-`libterraform` currently does not support multithreaded use. Terraform
-operations can still affect real infrastructure, so use `apply`, `destroy`,
-state commands, imports, and tests with the same caution as the Terraform CLI.
+`TerraformCommand` is safe to call from multiple Python threads, but Terraform
+CLI execution is serialized inside the shared library. Terraform still uses
+process-wide state such as the current working directory, stdio, checkpoint
+state, and plugin client cleanup, so true parallel Terraform operations require
+separate processes.
+
+Terraform operations can still affect real infrastructure, so use `apply`,
+`destroy`, state commands, imports, and tests with the same caution as the
+Terraform CLI.

@@ -23,7 +23,10 @@
 pip install libterraform
 ```
 
-> **Note:** This library does not support multithreading.
+> **Threading:** `TerraformCommand` can be called from multiple Python threads,
+> but Terraform CLI execution is serialized inside the shared library because
+> Terraform uses process-wide state. Use separate processes if you need truly
+> parallel Terraform operations.
 
 ## Usage
 

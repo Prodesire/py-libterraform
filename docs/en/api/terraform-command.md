@@ -8,6 +8,13 @@ from libterraform import TerraformCommand
 
 Most high-level methods return a `CommandResult`.
 
+## Threading
+
+`TerraformCommand` can be called from multiple Python threads. Calls are
+thread-safe, but Terraform CLI execution is serialized inside the shared
+library because Terraform uses process-wide state. Use separate processes for
+true parallel Terraform operations.
+
 ## CommandResult
 
 `CommandResult` exposes:

@@ -23,7 +23,9 @@
 pip install libterraform
 ```
 
-> **注意：** 当前版本不支持多线程调用。
+> **线程说明：** `TerraformCommand` 可以被多个 Python 线程调用，但由于
+> Terraform CLI 使用进程级全局状态，共享库内部会串行执行 Terraform 命令。如需
+> 真正并行的 Terraform 操作，请使用多个进程隔离。
 
 ## 使用
 

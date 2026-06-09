@@ -32,6 +32,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"unsafe"
 )
 
@@ -44,10 +45,10 @@ import "C"
 // CLI
 // **********************************************
 
+var runCliMu sync.Mutex
+var shutdownChsMu sync.Mutex
 var shutdownChs = make(map[chan struct{}]struct{})
 var logFile *os.File
-var origStdout = os.Stdout
-var origStderr = os.Stderr
 
 func init() {
 	signalCh := make(chan os.Signal, 4)
@@ -57,9 +58,11 @@ func init() {
 		for {
 			<-signalCh
 			log.Printf("[INFO] Received signal, shutting down")
+			shutdownChsMu.Lock()
 			for shutdownCh := range shutdownChs {
 				shutdownCh <- struct{}{}
 			}
+			shutdownChsMu.Unlock()
 			log.Printf("[INFO] Received signal, shut down success")
 		}
 	}()
@@ -67,13 +70,22 @@ func init() {
 
 //export RunCli
 func RunCli(cArgc C.int, cArgv **C.char, cStdOutFd C.int, cStdErrFd C.int) C.int {
+	// Terraform's CLI path still relies on process-wide state such as the
+	// current working directory, stdio, checkpoint state, and plugin cleanup.
+	// Serialize calls so Python threads can safely share this library.
+	runCliMu.Lock()
+	defer runCliMu.Unlock()
 	defer logging.PanicHandler()
 
 	var err error
+	oldArgs := append([]string(nil), os.Args...)
+	oldStdout := os.Stdout
+	oldStderr := os.Stderr
+	oldUi := Ui
+	oldWd, oldWdErr := os.Getwd()
 
 	// Convert C variables to Go variables
-	os.Args = os.Args[:0]
-	os.Args = append(os.Args, "Terraform")
+	os.Args = []string{"Terraform"}
 	argc := int(cArgc)
 	slice := unsafe.Slice(cArgv, argc)
 	for _, s := range slice {
@@ -94,8 +106,15 @@ func RunCli(cArgc C.int, cArgv **C.char, cStdOutFd C.int, cStdErrFd C.int) C.int
 	}}
 
 	defer func() {
-		os.Stdout = origStdout
-		os.Stderr = origStderr
+		os.Args = oldArgs
+		os.Stdout = oldStdout
+		os.Stderr = oldStderr
+		Ui = oldUi
+		if oldWdErr == nil {
+			if err := os.Chdir(oldWd); err != nil {
+				log.Printf("[ERROR] Could not restore working directory: %v", err)
+			}
+		}
 		Stdout.Close()
 		Stderr.Close()
 		if len(checkpointResult) > 0 {
@@ -274,9 +293,13 @@ func RunCli(cArgc C.int, cArgv **C.char, cStdOutFd C.int, cStdErrFd C.int) C.int
 	// that we've now switched to above.
 
 	shutdownCh := make(chan struct{}, 2)
+	shutdownChsMu.Lock()
 	shutdownChs[shutdownCh] = struct{}{}
+	shutdownChsMu.Unlock()
 	defer func() {
+		shutdownChsMu.Lock()
 		delete(shutdownChs, shutdownCh)
+		shutdownChsMu.Unlock()
 		close(shutdownCh)
 	}()
 	meta := NewMeta(originalWd, streams, config, services, providerSrc, providerDevOverrides, unmanagedProviders, shutdownCh, ctx)

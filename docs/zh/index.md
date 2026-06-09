@@ -36,6 +36,9 @@
 
 ## 运行约束
 
-`libterraform` 当前不支持多线程调用。Terraform 操作仍可能影响真实基础设施，
-因此执行 `apply`、`destroy`、状态命令、导入和测试时，应保持与直接使用
-Terraform CLI 相同的谨慎程度。
+`TerraformCommand` 可以被多个 Python 线程安全调用，但 Terraform CLI 会在共享库
+内部串行执行。Terraform 仍使用当前工作目录、stdio、checkpoint 状态和 plugin
+client 清理等进程级全局状态，因此真正并行的 Terraform 操作需要使用多个进程隔离。
+
+Terraform 操作仍可能影响真实基础设施，因此执行 `apply`、`destroy`、状态命令、
+导入和测试时，应保持与直接使用 Terraform CLI 相同的谨慎程度。

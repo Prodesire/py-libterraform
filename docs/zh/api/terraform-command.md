@@ -10,6 +10,12 @@ from libterraform import TerraformCommand
 方法。构造时可传入 `cwd` 作为默认 Terraform 工作目录。多数高层方法会返回
 `CommandResult`。
 
+## 线程说明
+
+`TerraformCommand` 可以被多个 Python 线程调用。调用本身是线程安全的，但由于
+Terraform 使用进程级全局状态，共享库内部会串行执行 Terraform CLI。如需真正并行的
+Terraform 操作，请使用多个进程隔离。
+
 ## CommandResult
 
 `CommandResult` 暴露以下字段：
