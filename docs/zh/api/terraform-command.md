@@ -152,6 +152,7 @@ Terraform 运行所需的全部本地数据（这些数据通常不提交到版�
 | `lockfile` | `str` | 设置 dependency lockfile 模式，目前 Terraform 仅支持 `readonly`。 | `None` |
 | `ignore_remote_version` | `bool` | 仅用于 HCP Terraform 和 remote backend 的少见选项。设置后将忽略本地和远端 Terraform 版本兼容性检查，允许在可能存在 state 表示不匹配时继续操作。 | `None` |
 | `test_directory` | `str` | Terraform test 目录，默认为 `"tests"`。 | `None` |
+| `enable_pluggable_state_storage_experiment` | `bool` | 启用 Terraform 的实验性 pluggable state storage 初始化路径。 | `None` |
 | `**options` | | 额外命令选项。 | |
 
 ::: libterraform.cli.TerraformCommand.validate
@@ -194,6 +195,7 @@ Terraform 运行所需的全部本地数据（这些数据通常不提交到版�
 | `no_color` | `bool` | 是否禁用颜色输出。 | `True` |
 | `no_test` | `bool` | 设置后 Terraform 将不校验测试文件。 | `None` |
 | `test_directory` | `str` | 设置 Terraform 测试目录，默认为 `"tests"`。 | `None` |
+| `query` | `bool` | 设置后 Terraform 还会校验 `.tfquery.hcl` 文件。 | `None` |
 | `**options` | | 额外命令选项。 | |
 
 ::: libterraform.cli.TerraformCommand.plan
@@ -255,9 +257,8 @@ Terraform 运行所需的全部本地数据（这些数据通常不提交到版�
 
 参考 <https://developer.hashicorp.com/terraform/cli/commands/query>
 
-执行实验性的 Terraform query 命令，根据 `.tfquery.hcl` 文件查询远端基础设施中
-匹配的资源。Terraform 1.13 起提供该命令，但只有启用 Terraform experimental
-features 时才会注册到 CLI。
+执行 Terraform query 命令，根据 `.tfquery.hcl` 文件查询远端基础设施中
+匹配的资源。Terraform 1.13 起实验性提供该命令；Terraform 1.14 起默认注册该命令。
 
 默认以 JSON 格式输出，并按 JSON 行流解析为 Python 列表。传入 `json=False`
 可获取原始文本。
@@ -1186,6 +1187,7 @@ Terraform 会在当前配置和测试目录中搜索 `.tftest.hcl` 文件，然�
 | `test_directory` | `str` | 设置 Terraform 测试目录，默认为 `"tests"`。 | `None` |
 | `run_parallelism` | `int` | 限制同一测试文件内可并行执行的 run block 数量，默认 10。 | `None` |
 | `verbose` | `bool` | 在每个测试运行块执行时打印 plan 或 state。 | `None` |
+| `allow_deferral` | `bool` | 允许测试操作使用 deferral。Terraform 仅在实验性构建中接受该选项。 | `None` |
 | `**options` | | 额外命令选项。 | |
 
 ::: libterraform.cli.TerraformCommand.workspace

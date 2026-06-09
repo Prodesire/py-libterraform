@@ -736,6 +736,12 @@ func NewCommands(meta command.Meta) map[string]cli.CommandFactory {
 			}, nil
 		},
 
+		"query": func() (cli.Command, error) {
+			return &command.QueryCommand{
+				Meta: meta,
+			}, nil
+		},
+
 		"refresh": func() (cli.Command, error) {
 			return &command.RefreshCommand{
 				Meta: meta,
@@ -901,8 +907,8 @@ func NewCommands(meta command.Meta) map[string]cli.CommandFactory {
 	}
 
 	if meta.AllowExperimentalFeatures {
-		commands["query"] = func() (cli.Command, error) {
-			return &command.QueryCommand{
+		commands["test cleanup"] = func() (cli.Command, error) {
+			return &command.TestCleanupCommand{
 				Meta: meta,
 			}, nil
 		}

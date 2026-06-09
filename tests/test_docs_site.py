@@ -196,18 +196,18 @@ def test_readmes_do_not_include_current_compatibility_section():
     assert "0.13.0 内置 Terraform 1.13.5" not in chinese_readme
 
 
-def test_docs_include_0_13_version_mapping():
+def test_docs_include_0_14_version_mapping():
     english_index = read_text("docs/en/index.md")
     chinese_index = read_text("docs/zh/index.md")
     english_policy = read_text("docs/en/release-policy.md")
     chinese_policy = read_text("docs/zh/release-policy.md")
 
     for page in [english_index, chinese_index]:
-        assert "libterraform/0.13.0/" in page
-        assert "terraform/tree/v1.13.5" in page
+        assert "libterraform/0.14.0/" in page
+        assert "terraform/tree/v1.14.9" in page
 
-    assert "`0.13.x` | `1.13.x` | `release/0.13`" in english_policy
-    assert "`0.13.x` | `1.13.x` | `release/0.13`" in chinese_policy
+    assert "`0.14.x` | `1.14.x` | `release/0.14`" in english_policy
+    assert "`0.14.x` | `1.14.x` | `release/0.14`" in chinese_policy
 
 
 def test_docs_version_tables_include_release_matrix_entries():
@@ -287,15 +287,20 @@ def test_chinese_api_reference_has_method_descriptions_and_parameters():
         "`test_directory`",
         "`plugin_cache_dir`",
         "`generate_config_out`",
+        "`enable_pluggable_state_storage_experiment`",
+        "`query`",
+        "`allow_deferral`",
         "Terraform 1.11 起支持人类可读输出",
         "Terraform 1.12 起提供该命令",
         "Terraform 1.13 起提供该命令",
+        "Terraform 1.14 起默认注册该命令",
         "传入 `json=False` 可获取原始文本",
         "将 JUnit XML 测试报告写入指定文件",
         "`junit_xml` 仅支持本地测试执行，不能与 `cloud_run` 同时使用",
         "限制同一测试文件内可并行执行的 run block 数量",
+        "允许测试操作使用 deferral",
         "执行 Terraform Stacks 子命令",
-        "执行实验性的 Terraform query 命令",
+        "执行 Terraform query 命令",
     ]:
         assert phrase in command_page
 
