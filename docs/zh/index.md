@@ -25,6 +25,7 @@
 
 | libterraform | Terraform |
 |---|---|
+| [0.15.0](https://pypi.org/project/libterraform/0.15.0/) | [1.15.5](https://github.com/hashicorp/terraform/tree/v1.15.5) |
 | [0.14.0](https://pypi.org/project/libterraform/0.14.0/) | [1.14.9](https://github.com/hashicorp/terraform/tree/v1.14.9) |
 | [0.13.0](https://pypi.org/project/libterraform/0.13.0/) | [1.13.5](https://github.com/hashicorp/terraform/tree/v1.13.5) |
 | [0.12.0](https://pypi.org/project/libterraform/0.12.0/) | [1.12.2](https://github.com/hashicorp/terraform/tree/v1.12.2) |

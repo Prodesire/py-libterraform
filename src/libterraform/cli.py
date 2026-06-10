@@ -232,6 +232,7 @@ class TerraformCommand:
         ignore_remote_version: bool = None,
         test_directory: str = None,
         enable_pluggable_state_storage_experiment: bool = None,
+        create_default_workspace: bool = None,
         **options,
     ) -> CommandResult:
         """Refer to https://developer.hashicorp.com/terraform/cli/commands/init
@@ -292,6 +293,8 @@ class TerraformCommand:
         :param test_directory: Set the Terraform test directory, defaults to "tests".
         :param enable_pluggable_state_storage_experiment: Enable Terraform's
             experimental pluggable state storage initialization path.
+        :param create_default_workspace: Control whether Terraform creates the
+            default workspace when initializing a state store for the first time.
         :param options: More command options.
         """
         options.update(
@@ -314,6 +317,7 @@ class TerraformCommand:
             enable_pluggable_state_storage_experiment=flag(
                 enable_pluggable_state_storage_experiment
             ),
+            create_default_workspace=create_default_workspace,
         )
         retcode, stdout, stderr = self.run(
             "init", options=options, chdir=self.cwd, check=check
@@ -328,6 +332,8 @@ class TerraformCommand:
         no_test: bool = None,
         test_directory: str = None,
         query: bool = None,
+        vars: dict = None,
+        var_files: List[str] = None,
         **options,
     ) -> CommandResult:
         """Refer to https://developer.hashicorp.com/terraform/cli/commands/validate
@@ -362,6 +368,9 @@ class TerraformCommand:
         :param no_test: If specified, Terraform will not validate test files.
         :param test_directory: Set the Terraform test directory, defaults to "tests".
         :param query: If specified, Terraform will also validate .tfquery.hcl files.
+        :param vars: Set variables in the root module of the configuration.
+        :param var_files: Load variable values from the given files, in addition to
+            the default files terraform.tfvars and *.auto.tfvars.
         :param options: More command options.
         """
         options.update(
@@ -369,6 +378,8 @@ class TerraformCommand:
             no_test=flag(no_test),
             test_directory=test_directory,
             query=flag(query),
+            var=vars,
+            var_file=var_files,
         )
         retcode, stdout, stderr = self.run(
             "validate", options=options, chdir=self.cwd, check=check, json=json
@@ -534,6 +545,8 @@ class TerraformCommand:
         check: bool = False,
         json: bool = True,
         no_color: bool = True,
+        vars: dict = None,
+        var_files: List[str] = None,
         **options,
     ) -> CommandResult:
         """Refer to https://developer.hashicorp.com/terraform/cli/commands/show
@@ -547,10 +560,15 @@ class TerraformCommand:
         :param check: Whether to check return code.
         :param json: Whether to load stdout as json.
         :param no_color: True to output not contain any color.
+        :param vars: Set variables in the root module of the configuration.
+        :param var_files: Load variable values from the given files, in addition to
+            the default files terraform.tfvars and *.auto.tfvars.
         :param options: More command options.
         """
         options.update(
             no_color=flag(no_color),
+            var=vars,
+            var_file=var_files,
         )
         args = [path] if path else None
         retcode, stdout, stderr = self.run(
@@ -820,6 +838,8 @@ class TerraformCommand:
         no_color: bool = True,
         update: bool = None,
         test_directory: str = None,
+        vars: dict = None,
+        var_files: List[str] = None,
         **options,
     ) -> CommandResult:
         """Refer to https://developer.hashicorp.com/terraform/cli/commands/get
@@ -841,12 +861,17 @@ class TerraformCommand:
         :param update: Check already-downloaded modules for available updates
             and install the newest versions available.
         :param test_directory: Set the Terraform test directory, defaults to "tests".
+        :param vars: Set variables in the root module of the configuration.
+        :param var_files: Load variable values from the given files, in addition to
+            the default files terraform.tfvars and *.auto.tfvars.
         :param options: More command options.
         """
         options.update(
             no_color=flag(no_color),
             update=flag(update),
             test_directory=test_directory,
+            var=vars,
+            var_file=var_files,
         )
         retcode, stdout, stderr = self.run(
             "get", options=options, chdir=self.cwd, check=check
@@ -860,6 +885,10 @@ class TerraformCommand:
         plan: str = None,
         draw_cycles: bool = None,
         type: str = None,
+        module_depth: int = None,
+        verbose: bool = None,
+        vars: dict = None,
+        var_files: List[str] = None,
         **options,
     ) -> CommandResult:
         """Refer to https://developer.hashicorp.com/terraform/cli/commands/graph
@@ -891,6 +920,12 @@ class TerraformCommand:
             resources in your configuration, without any particular
             operation in mind. Full operation graphs are more detailed
             but therefore often harder to read.
+        :param module_depth: Deprecated Terraform option that controls the
+            depth of modules shown.
+        :param verbose: Enable verbose graph output.
+        :param vars: Set variables in the root module of the configuration.
+        :param var_files: Load variable values from the given files, in addition to
+            the default files terraform.tfvars and *.auto.tfvars.
         :param options: More command options.
         """
         options.update(
@@ -898,6 +933,10 @@ class TerraformCommand:
             plan=plan,
             draw_cycles=flag(draw_cycles),
             type=type,
+            module_depth=module_depth,
+            verbose=flag(verbose),
+            var=vars,
+            var_file=var_files,
         )
         retcode, stdout, stderr = self.run(
             "graph", options=options, chdir=self.cwd, check=check
@@ -1028,6 +1067,8 @@ class TerraformCommand:
         self,
         check: bool = False,
         json: bool = True,
+        vars: dict = None,
+        var_files: List[str] = None,
         **options,
     ) -> CommandResult:
         """Refer to https://developer.hashicorp.com/terraform/cli/commands/modules
@@ -1039,8 +1080,15 @@ class TerraformCommand:
 
         :param check: Whether to check return code.
         :param json: Whether to load stdout as json.
+        :param vars: Set variables in the root module of the configuration.
+        :param var_files: Load variable values from the given files, in addition to
+            the default files terraform.tfvars and *.auto.tfvars.
         :param options: More command options.
         """
+        options.update(
+            var=vars,
+            var_file=var_files,
+        )
         retcode, stdout, stderr = self.run(
             "modules", options=options, chdir=self.cwd, check=check, json=json
         )
