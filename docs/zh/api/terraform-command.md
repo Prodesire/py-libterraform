@@ -153,6 +153,7 @@ Terraform 运行所需的全部本地数据（这些数据通常不提交到版�
 | `ignore_remote_version` | `bool` | 仅用于 HCP Terraform 和 remote backend 的少见选项。设置后将忽略本地和远端 Terraform 版本兼容性检查，允许在可能存在 state 表示不匹配时继续操作。 | `None` |
 | `test_directory` | `str` | Terraform test 目录，默认为 `"tests"`。 | `None` |
 | `enable_pluggable_state_storage_experiment` | `bool` | 启用 Terraform 的实验性 pluggable state storage 初始化路径。 | `None` |
+| `create_default_workspace` | `bool` | 控制首次初始化 state store 时 Terraform 是否创建 default workspace。Terraform 1.15 起提供；通常与 pluggable state storage 实验路径一起使用。 | `None` |
 | `**options` | | 额外命令选项。 | |
 
 ::: libterraform.cli.TerraformCommand.validate
@@ -196,6 +197,8 @@ Terraform 运行所需的全部本地数据（这些数据通常不提交到版�
 | `no_test` | `bool` | 设置后 Terraform 将不校验测试文件。 | `None` |
 | `test_directory` | `str` | 设置 Terraform 测试目录，默认为 `"tests"`。 | `None` |
 | `query` | `bool` | 设置后 Terraform 还会校验 `.tfquery.hcl` 文件。 | `None` |
+| `vars` | `dict` | 设置根模块中的变量。Terraform 1.15 起 `validate` 支持 `-var`。 | `None` |
+| `var_files` | `List[str]` | 从给定文件加载变量值，追加到默认文件 `terraform.tfvars` 和 `*.auto.tfvars` 之上。Terraform 1.15 起 `validate` 支持 `-var-file`。 | `None` |
 | `**options` | | 额外命令选项。 | |
 
 ::: libterraform.cli.TerraformCommand.plan
@@ -301,6 +304,8 @@ Terraform 运行所需的全部本地数据（这些数据通常不提交到版�
 | `check` | `bool` | 是否检查返回码。 | `False` |
 | `json` | `bool` | 是否以 JSON 格式输出。 | `True` |
 | `no_color` | `bool` | 是否禁用颜色输出。 | `True` |
+| `vars` | `dict` | 设置根模块中的变量。Terraform 1.15 起 `show` 支持 `-var`。 | `None` |
+| `var_files` | `List[str]` | 从给定文件加载变量值，追加到默认文件 `terraform.tfvars` 和 `*.auto.tfvars` 之上。Terraform 1.15 起 `show` 支持 `-var-file`。 | `None` |
 | `**options` | | 额外命令选项。 | |
 
 ::: libterraform.cli.TerraformCommand.apply
@@ -477,6 +482,8 @@ module 安装默认也作为 `terraform init` 命令的一部分自动进行，�
 | `no_color` | `bool` | 是否禁用颜色输出。 | `True` |
 | `update` | `bool` | 检查已下载 module 的可用更新并安装最新版本。 | `None` |
 | `test_directory` | `str` | 设置 Terraform 测试目录，默认为 `"tests"`。 | `None` |
+| `vars` | `dict` | 设置根模块中的变量。Terraform 1.15 起 `get` 支持 `-var`。 | `None` |
+| `var_files` | `List[str]` | 从给定文件加载变量值，追加到默认文件 `terraform.tfvars` 和 `*.auto.tfvars` 之上。Terraform 1.15 起 `get` 支持 `-var-file`。 | `None` |
 | `**options` | | 额外命令选项。 | |
 
 ::: libterraform.cli.TerraformCommand.graph
@@ -510,6 +517,10 @@ module 安装默认也作为 `terraform init` 命令的一部分自动进行，�
 | `plan` | `str` | 使用指定的 plan 文件渲染图形，隐含 `type=apply`。 | `None` |
 | `draw_cycles` | `bool` | 用彩色边高亮图中的任何循环，帮助诊断循环错误。仅在使用 `type` 选择真实评估图时有效。 | `None` |
 | `type` | `str` | 输出的操作图类型。可选 `plan`、`plan-refresh-only`、`plan-destroy` 或 `apply`。默认仅显示资源关系摘要。 | `None` |
+| `module_depth` | `int` | 已废弃的 Terraform 选项，用于控制显示的 module 深度。Terraform 1.15 起在 parser 中显式支持。 | `None` |
+| `verbose` | `bool` | 启用更详细的 graph 输出。Terraform 1.15 起在 parser 中显式支持。 | `None` |
+| `vars` | `dict` | 设置根模块中的变量。Terraform 1.15 起 `graph` 支持 `-var`。 | `None` |
+| `var_files` | `List[str]` | 从给定文件加载变量值，追加到默认文件 `terraform.tfvars` 和 `*.auto.tfvars` 之上。Terraform 1.15 起 `graph` 支持 `-var-file`。 | `None` |
 | `**options` | | 额外命令选项。 | |
 
 ::: libterraform.cli.TerraformCommand.import_resource
@@ -606,6 +617,8 @@ ID，具体语法请参考对应资源类型的文档。
 |---|---|---|---|
 | `check` | `bool` | 是否检查返回码。 | `False` |
 | `json` | `bool` | 是否以 JSON 格式输出。 | `True` |
+| `vars` | `dict` | 设置根模块中的变量。Terraform 1.15 起 `modules` 支持 `-var`。 | `None` |
+| `var_files` | `List[str]` | 从给定文件加载变量值，追加到默认文件 `terraform.tfvars` 和 `*.auto.tfvars` 之上。Terraform 1.15 起 `modules` 支持 `-var-file`。 | `None` |
 | `**options` | | 额外命令选项。 | |
 
 ::: libterraform.cli.TerraformCommand.providers

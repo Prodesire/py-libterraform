@@ -196,18 +196,18 @@ def test_readmes_do_not_include_current_compatibility_section():
     assert "0.13.0 内置 Terraform 1.13.5" not in chinese_readme
 
 
-def test_docs_include_0_14_version_mapping():
+def test_docs_include_0_15_version_mapping():
     english_index = read_text("docs/en/index.md")
     chinese_index = read_text("docs/zh/index.md")
     english_policy = read_text("docs/en/release-policy.md")
     chinese_policy = read_text("docs/zh/release-policy.md")
 
     for page in [english_index, chinese_index]:
-        assert "libterraform/0.14.0/" in page
-        assert "terraform/tree/v1.14.9" in page
+        assert "libterraform/0.15.0/" in page
+        assert "terraform/tree/v1.15.5" in page
 
-    assert "`0.14.x` | `1.14.x` | `release/0.14`" in english_policy
-    assert "`0.14.x` | `1.14.x` | `release/0.14`" in chinese_policy
+    assert "`0.15.x` | `1.15.x` | `release/0.15`" in english_policy
+    assert "`0.15.x` | `1.15.x` | `release/0.15`" in chinese_policy
 
 
 def test_docs_version_tables_include_release_matrix_entries():
@@ -288,6 +288,9 @@ def test_chinese_api_reference_has_method_descriptions_and_parameters():
         "`plugin_cache_dir`",
         "`generate_config_out`",
         "`enable_pluggable_state_storage_experiment`",
+        "`create_default_workspace`",
+        "`module_depth`",
+        "`verbose`",
         "`query`",
         "`allow_deferral`",
         "Terraform 1.11 起支持人类可读输出",

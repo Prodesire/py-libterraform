@@ -4,4 +4,4 @@ ROOT = os.path.dirname(__file__)
 TF_DIR = os.path.join(ROOT, "tf")
 TF_SLEEP_DIR = os.path.join(TF_DIR, "sleep")
 TF_SLEEP2_DIR = os.path.join(TF_DIR, "sleep2")
-EXPECTED_TERRAFORM_VERSION = "1.14.9"
+EXPECTED_TERRAFORM_VERSION = "1.15.5"
