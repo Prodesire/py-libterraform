@@ -1,4 +1,5 @@
 import ast
+import json
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +20,10 @@ def markdown_corpus() -> str:
         *sorted((ROOT / "docs").glob("**/*.md")),
     ]
     return "\n".join(path.read_text(encoding="utf-8") for path in paths)
+
+
+def release_matrix() -> dict[str, Any]:
+    return json.loads(read_text("release-matrix.json"))
 
 
 def nav_titles(items: list[dict[str, Any]]) -> list[str]:
@@ -203,6 +208,26 @@ def test_docs_include_0_13_version_mapping():
 
     assert "`0.13.x` | `1.13.x` | `release/0.13`" in english_policy
     assert "`0.13.x` | `1.13.x` | `release/0.13`" in chinese_policy
+
+
+def test_docs_version_tables_include_release_matrix_entries():
+    pages = [
+        read_text("docs/en/index.md"),
+        read_text("docs/zh/index.md"),
+    ]
+
+    for entry in release_matrix()["releases"]:
+        libterraform_version = entry["libterraform_version"]
+        terraform_version = entry["terraform_version"]
+        expected = (
+            f"| [{libterraform_version}]"
+            f"(https://pypi.org/project/libterraform/{libterraform_version}/) | "
+            f"[{terraform_version}]"
+            f"(https://github.com/hashicorp/terraform/tree/v{terraform_version}) |"
+        )
+
+        for page in pages:
+            assert expected in page
 
 
 def test_chinese_docs_cover_public_python_interfaces():
