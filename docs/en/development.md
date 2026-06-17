@@ -138,6 +138,27 @@ uv run pytest --color=yes
 uv build --wheel
 ```
 
+Before starting a Terraform update, inspect upstream drift:
+
+```bash
+make inspect-upstream
+```
+
+This checks the current release matrix entry, compares Terraform's registered
+commands with the native bridge, reports Python wrapper and documentation gaps,
+and optionally reads the Terraform releases index to identify patch updates and
+next-minor prereleases.
+
+The wheel build uses Python ABI-independent platform tags such as
+`py3-none-macosx_14_0_arm64` and `py3-none-manylinux_2_35_x86_64`, because the
+package loads the bundled Terraform shared library with `ctypes` instead of a
+CPython extension module. During release builds, Linux wheel tags are also
+normalized by `scripts/normalize_wheel_tags.py` as a guardrail. The release
+workflow publishes with PyPI Trusted Publishing through
+`uv publish --trusted-publishing automatic`, so the workflow needs the `pypi`
+environment configured as a trusted publisher on PyPI rather than a long-lived
+`PYPI_TOKEN` secret.
+
 ## Troubleshooting
 
 If importing `libterraform` fails because the shared library is missing, build

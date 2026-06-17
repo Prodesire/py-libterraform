@@ -327,6 +327,9 @@ def test_chinese_development_docs_include_release_policy_and_full_sections():
         "[发布策略](release-policy.md)",
         "release-matrix.json",
         "python scripts/verify_release_matrix.py",
+        "make inspect-upstream",
+        "Trusted Publishing",
+        "py3-none-manylinux_2_35_x86_64",
     ]:
         assert phrase in development_page
 

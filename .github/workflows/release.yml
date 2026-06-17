@@ -36,9 +36,7 @@ jobs:
       - name: Fix linux wheel tag
         if: runner.os == 'Linux'
         run: |
-          for f in dist/*-linux_*.whl; do
-            mv "$f" "$(echo $f | sed 's/linux_/manylinux_2_35_/')"
-          done
+          python scripts/normalize_wheel_tags.py dist
       - name: Upload distribution artifacts
         uses: actions/upload-artifact@v5
         with:
@@ -79,6 +77,12 @@ jobs:
   publish:
     needs: [ build, build-macos-x64 ]
     runs-on: macos-14
+    environment:
+      name: pypi
+      url: https://pypi.org/p/libterraform
+    permissions:
+      contents: write
+      id-token: write
     steps:
       - name: Checkout repository code
         uses: actions/checkout@v5
@@ -97,11 +101,9 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
       - name: Publish to PyPI
-        env:
-          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
         run: |
           for attempt in 1 2 3; do
-            uv publish --check-url https://pypi.org/simple/ dist/* && exit 0
+            uv publish --trusted-publishing automatic --check-url https://pypi.org/simple/ dist/* && exit 0
             if [ "$attempt" -lt 3 ]; then
               sleep $((attempt * 60))
             fi

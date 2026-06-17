@@ -59,6 +59,18 @@ def test_build_hook_uses_native_go_sources():
     assert not (ROOT / "plugin_patch.go").exists()
 
 
+def test_build_hook_uses_python_abi_independent_platform_wheel_tags():
+    assert (
+        hatch_build.wheel_tag("Linux", "linux-x86_64")
+        == "py3-none-manylinux_2_35_x86_64"
+    )
+    assert (
+        hatch_build.wheel_tag("Darwin", "macosx-14.0-arm64")
+        == "py3-none-macosx_14_0_arm64"
+    )
+    assert hatch_build.wheel_tag("Windows", "win-amd64") == "py3-none-win_amd64"
+
+
 def test_go_plugin_version_from_mod_reads_required_module():
     mod_content = """
 module github.com/hashicorp/terraform
