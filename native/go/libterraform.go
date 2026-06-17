@@ -908,6 +908,12 @@ func NewCommands(meta command.Meta) map[string]cli.CommandFactory {
 	}
 
 	if meta.AllowExperimentalFeatures {
+		commands["cloud"] = func() (cli.Command, error) {
+			return &command.CloudCommand{
+				Meta: meta,
+			}, nil
+		}
+
 		commands["test cleanup"] = func() (cli.Command, error) {
 			return &command.TestCleanupCommand{
 				Meta: meta,
