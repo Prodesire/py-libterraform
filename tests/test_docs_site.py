@@ -67,6 +67,9 @@ def test_zensical_config_generates_api_docs_for_project_pages_url():
     assert {"AsyncTerraformCommand": "api/async-terraform-command.md"} in project[
         "nav"
     ][2]["API Reference"]
+    assert {"Parallel Execution": "parallel-execution.md"} in project["nav"][1][
+        "Getting Started"
+    ]
 
     python_handler = project["plugins"]["mkdocstrings"]["handlers"]["python"]
     assert python_handler["paths"] == ["src"]
@@ -101,10 +104,12 @@ def test_chinese_zensical_config_uses_separate_language_site():
     assert "首页" in titles
     assert "安装" in titles
     assert "快速开始" in titles
+    assert "并行执行" in titles
     assert "API 参考" in titles
     assert "发布策略" in titles
     assert "Home" not in titles
     assert "Getting Started" not in titles
+    assert {"并行执行": "parallel-execution.md"} in project["nav"][1]["入门"]
     assert project["extra"]["alternate"] == [
         {
             "name": "English",
@@ -366,6 +371,21 @@ def test_api_reference_pages_generate_public_python_interfaces():
     assert "cooperative cancellation" in async_command_page
     assert "load_config_dir" in config_page
     assert "TerraformCommandError" in exceptions_page
+
+
+def test_parallel_execution_docs_explain_process_isolation():
+    english_page = read_text("docs/en/parallel-execution.md")
+    chinese_page = read_text("docs/zh/parallel-execution.md")
+
+    for page in [english_page, chinese_page]:
+        assert "ProcessPoolExecutor" in page
+        assert "TerraformCommand" in page
+        assert "AsyncTerraformCommand" in page
+
+    assert "true parallel Terraform operations" in english_page
+    assert "one Python process" in english_page
+    assert "真正并行" in chinese_page
+    assert "单个 Python 进程" in chinese_page
 
 
 def test_docs_workflow_builds_and_deploys_github_pages():

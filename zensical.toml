@@ -13,6 +13,7 @@ nav = [
   { "Getting Started" = [
     { "Installation" = "installation.md" },
     { "Quick Start" = "quickstart.md" },
+    { "Parallel Execution" = "parallel-execution.md" },
   ] },
   { "API Reference" = [
     { "Overview" = "api/index.md" },
