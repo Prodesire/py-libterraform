@@ -7,7 +7,7 @@ GO_CHECK_PATHS=native/go
 GIT_HOOKS_PATH=scripts/git-hooks
 DOCS_PORT?=8000
 
-.PHONY: help install test lint build doc-build doc-serve publish clean format
+.PHONY: help install test lint build inspect-upstream doc-build doc-serve publish clean format
 
 help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[32m%-15s\033[0m %s\n", $$1, $$2}'
@@ -31,6 +31,9 @@ lint: ## Run Ruff, ty, and Go formatting checks
 
 build: ## Build libterraform
 	uv build --wheel $(UV_PYTHON_FLAG)
+
+inspect-upstream: ## Inspect Terraform release and bridge drift
+	uv run $(UV_PYTHON_FLAG) python scripts/inspect_upstream.py --releases-url https://releases.hashicorp.com/terraform/
 
 doc-build: ## Build the documentation site
 	rm -rf site

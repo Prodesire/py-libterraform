@@ -396,3 +396,5 @@ def test_makefile_exposes_doc_build_and_serve_targets():
     assert "python -m http.server" in makefile
     assert "doc-build: ## Build the documentation site" in makefile
     assert "doc-serve: ## Serve the documentation site locally" in makefile
+    assert "inspect-upstream: ## Inspect Terraform release and bridge drift" in makefile
+    assert "scripts/inspect_upstream.py --releases-url" in makefile
