@@ -89,9 +89,15 @@ def test_zensical_config_generates_api_docs_for_project_pages_url():
     assert {"TerraformPool": "api/terraform-pool.md"} in project["nav"][2][
         "API Reference"
     ]
+    assert {"Results & Streaming": "api/results.md"} in project["nav"][2][
+        "API Reference"
+    ]
     assert {"Parallel Execution": "parallel-execution.md"} in project["nav"][1][
         "Getting Started"
     ]
+    assert {"Plan Results and Streaming": "structured-and-streaming.md"} in project[
+        "nav"
+    ][1]["Getting Started"]
 
     python_handler = project["plugins"]["mkdocstrings"]["handlers"]["python"]
     assert python_handler["paths"] == ["src"]
@@ -132,7 +138,11 @@ def test_chinese_zensical_config_uses_separate_language_site():
     assert "Home" not in titles
     assert "Getting Started" not in titles
     assert {"并行执行": "parallel-execution.md"} in project["nav"][1]["入门"]
+    assert {"Plan 结果与流式输出": "structured-and-streaming.md"} in project["nav"][1][
+        "入门"
+    ]
     assert {"TerraformPool": "api/terraform-pool.md"} in project["nav"][2]["API 参考"]
+    assert {"结果与流式": "api/results.md"} in project["nav"][2]["API 参考"]
     assert project["extra"]["alternate"] == [
         {
             "name": "English",
@@ -227,7 +237,7 @@ def test_docs_include_0_15_version_mapping():
     chinese_policy = read_text("docs/zh/release-policy.md")
 
     for page in [english_index, chinese_index]:
-        assert "libterraform/0.15.0/" in page
+        assert "libterraform/0.15.1/" in page
         assert "terraform/tree/v1.15.5" in page
 
     assert "`0.15.x` | `1.15.x` | `release/0.15`" in english_policy
@@ -421,6 +431,35 @@ def test_api_reference_pages_generate_public_python_interfaces():
     ]:
         assert directive in pool_page
         assert directive in zh_pool_page
+
+
+def test_results_pages_document_the_same_types_in_both_languages():
+    english_page = read_text("docs/en/api/results.md")
+    chinese_page = read_text("docs/zh/api/results.md")
+
+    for directive in [
+        "::: libterraform.cli.PlanResult\n",
+        "::: libterraform.cli.ApplyResult\n",
+        "::: libterraform.models.ResourceChange\n",
+        "::: libterraform.models.ChangeSummary\n",
+        "::: libterraform.models.OutputChange\n",
+        "::: libterraform.cli.TerraformStream\n",
+    ]:
+        assert directive in english_page
+        assert directive in chinese_page
+
+
+def test_structured_and_streaming_guide_is_bilingual():
+    english_page = read_text("docs/en/structured-and-streaming.md")
+    chinese_page = read_text("docs/zh/structured-and-streaming.md")
+
+    for page in [english_page, chinese_page]:
+        assert "PlanResult" in page
+        assert "ApplyResult" in page
+        assert "TerraformStream" in page
+        assert "plan_stream" in page
+        assert "apply_stream" in page
+        assert "async for" in page
 
 
 def test_parallel_execution_docs_explain_process_isolation():

@@ -218,18 +218,11 @@ class TerraformStream:
     runs in a background thread, so the event loop / caller sees output live
     instead of waiting for the command to finish.
 
-    After iteration completes, `retcode` and `stderr` are populated.
-    If ``check=True`` and the command failed, iteration raises
-    `TerraformCommandError` at the end. Use it as
-    a context manager (or call `close()`) to stop a long-running command
-    early; `cancel()` requests cooperative cancellation explicitly.
-
-    Example::
-
-        with cli.apply_stream(auto_approve=True) as stream:
-            for event in stream:
-                print(event.get("@message"))
-        print(stream.retcode)
+    After iteration completes, ``retcode`` and ``stderr`` are populated. If
+    ``check=True`` and the command failed, iteration raises
+    ``TerraformCommandError`` at the end. Use it as a context manager (or call
+    ``close()``) to stop a long-running command early; ``cancel()`` requests
+    cooperative cancellation explicitly.
     """
 
     def __init__(self, argv, json=True, check=False):
