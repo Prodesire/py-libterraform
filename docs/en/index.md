@@ -22,6 +22,7 @@ parsing Terraform configuration directories.
 
 - [Installation](installation.md)
 - [Quick Start](quickstart.md)
+- [Choosing an Integration](alternatives.md)
 - [API Reference](api/index.md)
 - [Development Guide](development.md)
 - [Version Comparison](#version-comparison)

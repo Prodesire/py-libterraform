@@ -20,6 +20,7 @@
 
 - [安装](installation.md)
 - [快速开始](quickstart.md)
+- [如何选择集成方式](alternatives.md)
 - [API 参考](api/index.md)
 - [开发指南](development.md)
 - [发布策略](release-policy.md)

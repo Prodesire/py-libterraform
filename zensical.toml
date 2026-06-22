@@ -13,6 +13,7 @@ nav = [
   { "Getting Started" = [
     { "Installation" = "installation.md" },
     { "Quick Start" = "quickstart.md" },
+    { "Choosing an Integration" = "alternatives.md" },
     { "Parallel Execution" = "parallel-execution.md" },
     { "Plan Results and Streaming" = "structured-and-streaming.md" },
   ] },

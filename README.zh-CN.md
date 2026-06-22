@@ -70,6 +70,11 @@ pool 会启动 worker 进程，因此上述代码必须运行在 `if __name__ ==
 可在几秒内创建一个可运行的模块，[并行执行](https://prodesire.github.io/py-libterraform/zh/parallel-execution/)
 提供了完整的 pool 示例。
 
+如果你正在比较 Python Terraform 生态中的不同选择，可以阅读
+[如何选择 Python Terraform 集成方式](https://prodesire.github.io/py-libterraform/zh/alternatives/)：
+其中对比了 `python-terraform`、TofuPy、直接 `subprocess`、CDK for Terraform
+和 Pulumi。
+
 ## 贡献
 
 安装 [uv](https://docs.astral.sh/uv/getting-started/installation/)，然后：
