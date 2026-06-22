@@ -31,8 +31,9 @@ jobs:
         run: |
           uv build --wheel
       - name: Run tests
+        timeout-minutes: 15
         run: |
-          uv run pytest
+          uv run python -X faulthandler -m pytest -vv --durations=20 --timeout=120 --timeout-method=thread
       - name: Fix linux wheel tag
         if: runner.os == 'Linux'
         run: |

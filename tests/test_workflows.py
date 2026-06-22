@@ -62,14 +62,37 @@ def test_release_workflow_runs_tests_before_publishing():
     publish_job = content.split("  publish:", maxsplit=1)[1]
 
     assert (
-        "      - name: Run tests\n        run: |\n          uv run pytest\n"
+        "      - name: Run tests\n"
+        "        timeout-minutes: 15\n"
+        "        run: |\n"
+        "          uv run python -X faulthandler -m pytest -vv "
+        "--durations=20 --timeout=120 --timeout-method=thread\n"
     ) in build_job
-    assert build_job.index("uv build --wheel") < build_job.index("uv run pytest")
-    assert build_job.index("uv run pytest") < build_job.index(
+    assert build_job.index("uv build --wheel") < build_job.index(
+        "python -X faulthandler -m pytest"
+    )
+    assert build_job.index("python -X faulthandler -m pytest") < build_job.index(
         "Upload distribution artifacts"
     )
-    assert "uv run pytest" not in macos_x64_job
-    assert "uv run pytest" not in publish_job
+    assert "python -X faulthandler -m pytest" not in macos_x64_job
+    assert "python -X faulthandler -m pytest" not in publish_job
+
+
+def test_workflows_run_pytest_with_hang_diagnostics():
+    expected = (
+        "      - name: Run tests\n"
+        "        timeout-minutes: 15\n"
+        "        run: |\n"
+        "          uv run python -X faulthandler -m pytest -vv "
+        "--durations=20 --timeout=120 --timeout-method=thread\n"
+    )
+
+    for workflow_name in ("test.yml", "release.yml"):
+        content = (ROOT / ".github" / "workflows" / workflow_name).read_text(
+            encoding="utf-8"
+        )
+
+        assert expected in content
 
 
 def test_release_workflow_retries_pypi_publish_three_times():
