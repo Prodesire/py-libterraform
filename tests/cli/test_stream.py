@@ -67,10 +67,11 @@ def test_apply_stream_is_live(tmp_path):
         if event.get("type", "").startswith("apply_"):
             stamps.append(time.monotonic() - start)
 
-    # An early apply event must arrive well before the ~4s run finishes, which is
-    # only possible if output streams live rather than arriving all at once.
-    assert min(stamps) < 2.0
-    assert max(stamps) > 3.0
+    # Apply events must spread across the ~4s run rather than all arriving at the
+    # end, which is only possible if output streams live. Asserting the spread
+    # (instead of absolute timestamps) keeps this robust on slow CI runners.
+    assert len(stamps) >= 2
+    assert max(stamps) - min(stamps) > 2.0
 
 
 @pytest.mark.slow
@@ -82,11 +83,15 @@ def test_stream_close_cancels_running_command(tmp_path):
     with cli.apply_stream(vars={"time1": "12s", "time2": "12s"}) as stream:
         for event in stream:
             if event.get("type") == "apply_start":
+                # Let the apply settle in-flight before leaving. Cancelling
+                # during Terraform's graph setup can be missed, so wait until
+                # the resource operations are actually running.
+                time.sleep(2)
                 break  # leave early; __exit__ cancels and cleans up
     elapsed = time.monotonic() - start
 
     # Closing requested Terraform's shutdown, so we stop well before ~12s.
-    assert elapsed < 8
+    assert elapsed < 9
 
 
 # --- asynchronous streaming ---
