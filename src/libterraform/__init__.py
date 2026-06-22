@@ -16,5 +16,11 @@ _free.argtypes = [c_void_p]
 from .cli import TerraformCommand  # noqa: E402
 from .async_cli import AsyncTerraformCommand  # noqa: E402
 from .config import TerraformConfig  # noqa: E402
+from .pool import TerraformPool  # noqa: E402
 
-__all__ = ["AsyncTerraformCommand", "TerraformCommand", "TerraformConfig"]
+__all__ = [
+    "AsyncTerraformCommand",
+    "TerraformCommand",
+    "TerraformConfig",
+    "TerraformPool",
+]

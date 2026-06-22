@@ -67,6 +67,9 @@ def test_zensical_config_generates_api_docs_for_project_pages_url():
     assert {"AsyncTerraformCommand": "api/async-terraform-command.md"} in project[
         "nav"
     ][2]["API Reference"]
+    assert {"TerraformPool": "api/terraform-pool.md"} in project["nav"][2][
+        "API Reference"
+    ]
     assert {"Parallel Execution": "parallel-execution.md"} in project["nav"][1][
         "Getting Started"
     ]
@@ -110,6 +113,7 @@ def test_chinese_zensical_config_uses_separate_language_site():
     assert "Home" not in titles
     assert "Getting Started" not in titles
     assert {"并行执行": "parallel-execution.md"} in project["nav"][1]["入门"]
+    assert {"TerraformPool": "api/terraform-pool.md"} in project["nav"][2]["API 参考"]
     assert project["extra"]["alternate"] == [
         {
             "name": "English",
@@ -247,6 +251,9 @@ def test_chinese_docs_cover_public_python_interfaces():
     assert "::: libterraform.async_cli.AsyncTerraformCommand" in async_command_page
     assert "asyncio 兼容" in async_command_page
     assert "协作式取消" in async_command_page
+    pool_page = read_text("docs/zh/api/terraform-pool.md")
+    assert "::: libterraform.pool.TerraformPool" in pool_page
+    assert "真正并行" in pool_page
     assert "show_docstring_description: false" in command_page
     assert "show_docstring_parameters: false" in command_page
     assert "show_docstring_returns: false" in command_page
@@ -365,10 +372,14 @@ def test_api_reference_pages_generate_public_python_interfaces():
     config_page = read_text("docs/en/api/terraform-config.md")
     exceptions_page = read_text("docs/en/api/exceptions.md")
 
+    pool_page = read_text("docs/en/api/terraform-pool.md")
+
     assert "::: libterraform.cli.TerraformCommand" in command_page
     assert "::: libterraform.async_cli.AsyncTerraformCommand" in async_command_page
     assert "asyncio-compatible" in async_command_page
     assert "cooperative cancellation" in async_command_page
+    assert "::: libterraform.pool.TerraformPool" in pool_page
+    assert "true parallel Terraform operations" in pool_page
     assert "load_config_dir" in config_page
     assert "TerraformCommandError" in exceptions_page
 

@@ -44,6 +44,11 @@ docs = [
     "zensical>=0.0.43; python_version >= '3.10'",
 ]
 
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests that run real Terraform operations and take longer",
+]
+
 [tool.ty.rules]
 invalid-parameter-default = "ignore"
 

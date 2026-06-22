@@ -19,6 +19,7 @@ nav = [
     { "概览" = "api/index.md" },
     { "TerraformCommand" = "api/terraform-command.md" },
     { "AsyncTerraformCommand" = "api/async-terraform-command.md" },
+    { "TerraformPool" = "api/terraform-pool.md" },
     { "TerraformConfig" = "api/terraform-config.md" },
     { "异常" = "api/exceptions.md" },
   ] },

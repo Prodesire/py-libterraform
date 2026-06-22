@@ -25,7 +25,7 @@ pip install libterraform
 
 > **线程说明：** `TerraformCommand` 可以被多个 Python 线程调用，但由于
 > Terraform CLI 使用进程级全局状态，共享库内部会串行执行 Terraform 命令。如需
-> 真正并行的 Terraform 操作，请使用多个进程隔离。
+> 真正并行的 Terraform 操作，请使用 `TerraformPool`（或多个进程隔离）。
 
 ## 使用
 
@@ -49,6 +49,16 @@ from libterraform import AsyncTerraformCommand
 
 cli = AsyncTerraformCommand("path/to/module")
 await cli.validate(check=True)
+```
+
+使用 `TerraformPool` 可以在多个 worker 进程间并行执行 Terraform 命令：
+
+```python
+from libterraform import TerraformPool
+
+with TerraformPool(max_workers=4) as pool:
+    for result in pool.map("validate", ["modules/a", "modules/b"], check=True):
+        print(result.value["valid"])
 ```
 
 ## 贡献
