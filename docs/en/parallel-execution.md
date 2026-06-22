@@ -137,6 +137,8 @@ See [TerraformPool](api/terraform-pool.md) for the full API.
 
 ## Asynchronous: AsyncTerraformCommand
 
+### Stay responsive on the event loop
+
 By default `AsyncTerraformCommand` runs the blocking call in a worker thread. That
 keeps the event loop responsive, but Terraform CLI execution is still serialized
 inside the process:
@@ -147,6 +149,8 @@ from libterraform import AsyncTerraformCommand
 cli = AsyncTerraformCommand(modules[0])
 validation = await cli.validate(check=True)
 ```
+
+### Run commands in parallel with a pool
 
 To combine asyncio with true parallelism, pass a `TerraformPool` as the `pool`
 backend. Awaited commands then run in the pool's worker processes, so awaiting
@@ -183,6 +187,8 @@ if __name__ == "__main__":
 with TerraformPool(max_workers=4) as pool:
     retcode, stdout, stderr = await AsyncTerraformCommand.run("version", pool=pool)
 ```
+
+### Cancel an awaited command
 
 Cancelling the awaiting task requests cooperative cancellation for the run. With
 the default thread backend the worker thread is not terminated directly; with a

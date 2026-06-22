@@ -122,9 +122,12 @@ validation = await cli.validate(check=True)
 ```
 
 By default the call runs in a worker thread, so Terraform CLI execution is still
-serialized inside the shared library. For true parallel Terraform operations, see
-[Parallel Execution](parallel-execution.md). Cancelling the coroutine requests
+serialized inside the shared library. Cancelling the coroutine requests
 Terraform's cooperative shutdown path; it does not terminate the worker thread
 directly.
+
+To actually run Terraform commands at the same time — across modules, with sync
+or async APIs — see [Parallel Execution](parallel-execution.md), which covers
+`TerraformPool` and running `AsyncTerraformCommand` on a process pool.
 
 See the [API Reference](api/index.md) for the generated interface documentation.

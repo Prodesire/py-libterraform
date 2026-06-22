@@ -42,7 +42,8 @@ doc-build: ## Build the documentation site
 
 doc-serve: ## Serve the documentation site locally
 	$(MAKE) doc-build
-	uv run $(UV_PYTHON_FLAG) python -m http.server $(DOCS_PORT) --directory site
+	@echo "Docs available at http://localhost:$(DOCS_PORT)/ (zh: http://localhost:$(DOCS_PORT)/zh/)"
+	uv run $(UV_PYTHON_FLAG) python -m http.server $(DOCS_PORT) --bind 127.0.0.1 --directory site
 
 publish: ## Publish libterraform to PyPI
 	uv publish

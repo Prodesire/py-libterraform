@@ -118,7 +118,11 @@ validation = await cli.validate(check=True)
 ```
 
 默认情况下调用运行在 worker thread 中，因此 Terraform CLI 执行在共享库内部仍是
-串行的。如需真正并行的 Terraform 操作，见[并行执行](parallel-execution.md)。取消
-coroutine 会请求 Terraform 进入协作式 shutdown 流程，但不会直接终止 worker thread。
+串行的。取消 coroutine 会请求 Terraform 进入协作式 shutdown 流程，但不会直接终止
+worker thread。
+
+要让 Terraform 命令真正同时执行——跨多个模块、同步或异步——请见
+[并行执行](parallel-execution.md)，其中介绍了 `TerraformPool` 以及如何让
+`AsyncTerraformCommand` 运行在进程池上。
 
 完整接口见 [API 参考](api/index.md)。

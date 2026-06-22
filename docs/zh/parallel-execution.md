@@ -126,6 +126,8 @@ with TerraformPool(max_workers=2) as pool:
 
 ## 异步：AsyncTerraformCommand
 
+### 保持 event loop 响应
+
 `AsyncTerraformCommand` 默认把阻塞调用放到 worker thread 中执行。这能让 event loop
 保持响应，但 Terraform CLI 执行在进程内仍是串行的：
 
@@ -135,6 +137,8 @@ from libterraform import AsyncTerraformCommand
 cli = AsyncTerraformCommand(modules[0])
 validation = await cli.validate(check=True)
 ```
+
+### 用进程池并行执行命令
 
 要在 asyncio 中同时获得真正并行，可传入 `TerraformPool` 作为 `pool` 后端。此时被等待
 的命令会在 pool 的 worker 进程中执行，因此并发等待多条命令即可获得真正并行的
@@ -170,6 +174,8 @@ if __name__ == "__main__":
 with TerraformPool(max_workers=4) as pool:
     retcode, stdout, stderr = await AsyncTerraformCommand.run("version", pool=pool)
 ```
+
+### 取消等待中的命令
 
 取消等待中的 task 会为该 run 请求协作式取消。使用默认线程后端时，不会直接终止
 worker thread；使用 `pool` 后端时，该请求会投递到运行该命令的 worker 进程：
