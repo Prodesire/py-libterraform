@@ -222,7 +222,10 @@ class TerraformPool:
         initializer=None,
         initargs: tuple = (),
     ):
-        self._manager = (mp_context or multiprocessing).Manager()
+        if mp_context is None:
+            mp_context = multiprocessing.get_context("spawn")
+
+        self._manager = mp_context.Manager()
         self._cancel_registry = self._manager.dict()
         self._executor = ProcessPoolExecutor(
             max_workers=max_workers,
