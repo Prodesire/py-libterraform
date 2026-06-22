@@ -78,6 +78,58 @@ worker thread；使用 `pool` 后端时，该请求会投递到运行该命令�
 
 ::: libterraform.async_cli.AsyncTerraformCommand
     options:
+      heading_level: 2
+      members: false
+      show_root_full_path: false
       show_docstring_description: false
       show_docstring_parameters: false
       show_docstring_returns: false
+
+`TerraformCommand` 的每个公开方法都会被镜像为可等待的 coroutine
+（`await async_cli.plan(...)`）。下面记录的是直接定义在 `AsyncTerraformCommand` 上的方法。
+
+::: libterraform.async_cli.AsyncTerraformCommand.run
+    options:
+      heading_level: 3
+      show_root_full_path: false
+      show_docstring_description: false
+      show_docstring_parameters: false
+      show_docstring_returns: false
+
+不阻塞 event loop 地运行任意命令，其结果为 `(retcode, stdout, stderr)` 三元组。参数与
+`TerraformCommand.run()` 相同；额外可传入 `executor`（线程池）或 `pool`
+（`TerraformPool`，在 worker 进程中执行）。
+
+::: libterraform.async_cli.AsyncTerraformCommand.stream
+    options:
+      heading_level: 3
+      show_root_full_path: false
+      show_docstring_description: false
+      show_docstring_parameters: false
+      show_docstring_returns: false
+
+流式命令的异步迭代器，语义见 `TerraformCommand.stream()`。用法：
+`async for event in async_cli.stream("plan"): ...`。取消消费端的 task 会请求对该命令的
+协作式取消。
+
+::: libterraform.async_cli.AsyncTerraformCommand.plan_stream
+    options:
+      heading_level: 3
+      show_root_full_path: false
+      show_docstring_description: false
+      show_docstring_parameters: false
+      show_docstring_returns: false
+
+`terraform plan` 输出的异步迭代器。`vars` / `var_files` 与 `TerraformCommand.plan_stream()`
+一致；其余关键字选项按 flag 转换。
+
+::: libterraform.async_cli.AsyncTerraformCommand.apply_stream
+    options:
+      heading_level: 3
+      show_root_full_path: false
+      show_docstring_description: false
+      show_docstring_parameters: false
+      show_docstring_returns: false
+
+`terraform apply` 输出的异步迭代器。默认 `auto_approve=True`、`input=False`。`vars` /
+`var_files` 与 `TerraformCommand.apply_stream()` 一致。

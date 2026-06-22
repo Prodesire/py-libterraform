@@ -85,3 +85,26 @@ a `pool` backend the request is delivered to the worker process running the
 command.
 
 ::: libterraform.async_cli.AsyncTerraformCommand
+    options:
+      heading_level: 2
+      members: false
+
+Every public `TerraformCommand` method is mirrored as an awaitable coroutine
+(`await async_cli.plan(...)`). The methods documented below are defined directly
+on `AsyncTerraformCommand`.
+
+::: libterraform.async_cli.AsyncTerraformCommand.run
+    options:
+      heading_level: 3
+
+::: libterraform.async_cli.AsyncTerraformCommand.stream
+    options:
+      heading_level: 3
+
+::: libterraform.async_cli.AsyncTerraformCommand.plan_stream
+    options:
+      heading_level: 3
+
+::: libterraform.async_cli.AsyncTerraformCommand.apply_stream
+    options:
+      heading_level: 3

@@ -433,6 +433,20 @@ def test_api_reference_pages_generate_public_python_interfaces():
         assert directive in zh_pool_page
 
 
+def test_async_pages_document_the_same_methods_in_both_languages():
+    english_page = read_text("docs/en/api/async-terraform-command.md")
+    chinese_page = read_text("docs/zh/api/async-terraform-command.md")
+
+    for directive in [
+        "::: libterraform.async_cli.AsyncTerraformCommand.run\n",
+        "::: libterraform.async_cli.AsyncTerraformCommand.stream\n",
+        "::: libterraform.async_cli.AsyncTerraformCommand.plan_stream\n",
+        "::: libterraform.async_cli.AsyncTerraformCommand.apply_stream\n",
+    ]:
+        assert directive in english_page
+        assert directive in chinese_page
+
+
 def test_results_pages_document_the_same_types_in_both_languages():
     english_page = read_text("docs/en/api/results.md")
     chinese_page = read_text("docs/zh/api/results.md")
