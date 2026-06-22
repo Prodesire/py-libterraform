@@ -71,58 +71,82 @@ result = future.result()
 
 `pool.run()` 镜像 `TerraformCommand.run()`，其结果为 `(retcode, stdout, stderr)` 元组。
 
-## 接口
+::: libterraform.pool.TerraformPool
+    options:
+      heading_level: 2
+      members: false
+      show_root_full_path: false
+      show_docstring_description: false
+      show_docstring_parameters: false
+      show_docstring_returns: false
 
-### `TerraformPool(max_workers=None, mp_context=None, initializer=None, initargs=())`
+通过一组 worker 进程并行执行 Terraform 命令的进程池。复用同一个 pool，并将其用作
+上下文管理器（退出 `with` 块时自动调用 `shutdown(wait=True)`）。
 
-创建进程池。内部持有一个 `concurrent.futures.ProcessPoolExecutor`，以及用于跨进程
-传递取消请求的 worker 管理器。
+构造参数：
+
+| 参数 | 类型 | 说明 | 默认值 |
+|---|---|---|---|
+| `max_workers` | `int` | worker 进程数量，为 `None` 时使用 CPU 核数。 | `None` |
+| `mp_context` | | 用于创建进程的 multiprocessing 上下文。 | `None` |
+| `initializer` | | 每个 worker 启动时调用的可选初始化函数。 | `None` |
+| `initargs` | `tuple` | 传给 `initializer` 的参数。 | `()` |
+
+::: libterraform.pool.TerraformPool.command
+    options:
+      heading_level: 3
+      show_root_full_path: false
+      show_docstring_description: false
+      show_docstring_parameters: false
+      show_docstring_returns: false
+
+返回一个绑定到 `cwd` 的代理（`PoolCommand`），它镜像 `TerraformCommand` 的命令方法，
+但每个方法都把命令提交到进程池并返回 `concurrent.futures.Future`，其结果为通常的
+`CommandResult`（或抛出通常的错误）。对返回的 future 调用 `cancel()` 即可请求取消。
+
+参数：
+
+| 参数 | 类型 | 说明 | 默认值 |
+|---|---|---|---|
+| `cwd` | `str` | 命令的工作目录，传给 `TerraformCommand`。 | `None` |
+
+::: libterraform.pool.TerraformPool.submit
+    options:
+      heading_level: 3
+      show_root_full_path: false
+      show_docstring_description: false
+      show_docstring_parameters: false
+      show_docstring_returns: false
+
+底层接口：为 `cwd` 提交单条命令方法并返回其 `Future`（结果为 `CommandResult`）。当需要
+动态指定方法名时使用。
 
 参数：
 
 | 参数 | 类型 | 说明 |
 |---|---|---|
-| `max_workers` | `int \| None` | worker 进程数量。为 `None` 时使用默认值（CPU 核数）。 |
-| `mp_context` | `multiprocessing` 上下文 \| `None` | 用于创建进程的 multiprocessing 上下文。 |
-| `initializer` | `callable \| None` | 每个 worker 启动时调用的可选初始化函数。 |
-| `initargs` | `tuple` | 传给 `initializer` 的参数。 |
-
-### `command(cwd=None)`
-
-返回一个绑定到 `cwd` 的代理（`PoolCommand`）。该代理镜像 `TerraformCommand` 的命令
-方法，但每个方法都把命令提交到进程池，并返回 `concurrent.futures.Future`，其结果为
-通常的 `CommandResult`（或抛出通常的错误）。
-
-参数：
-
-| 参数 | 类型 | 说明 |
-|---|---|---|
-| `cwd` | `str \| None` | 命令的工作目录，传给 `TerraformCommand`。 |
-
-返回值：`PoolCommand` —— 绑定 `cwd` 的代理，其方法返回 `Future`。
-
-### `submit(cwd, method, *args, **kwargs)`
-
-底层接口：为 `cwd` 提交单条命令方法并返回其 `Future`。当需要动态指定方法名时使用。
-
-参数：
-
-| 参数 | 类型 | 说明 |
-|---|---|---|
-| `cwd` | `str \| None` | 命令的工作目录。 |
+| `cwd` | `str` | 命令的工作目录。 |
 | `method` | `str` | 要调用的 `TerraformCommand` 方法名，例如 `"validate"`、`"apply"`。 |
 | `*args` / `**kwargs` | | 转发给该方法的参数。 |
 
-返回值：`concurrent.futures.Future` —— 结果为 `CommandResult`。
+::: libterraform.pool.TerraformPool.run
+    options:
+      heading_level: 3
+      show_root_full_path: false
+      show_docstring_description: false
+      show_docstring_parameters: false
+      show_docstring_returns: false
 
-### `run(cmd, args=None, options=None, chdir=None, check=False, json=False)`
-
-镜像 `TerraformCommand.run()`，但返回 `Future` 而非阻塞等待。其 `Future` 结果为
+镜像 `TerraformCommand.run()`，但返回 `Future` 而非阻塞等待；其结果为
 `(retcode, stdout, stderr)` 元组。参数含义与 `TerraformCommand.run()` 相同。
 
-返回值：`concurrent.futures.Future` —— 结果为 `(retcode, stdout, stderr)` 元组。
-
-### `map(method, cwds, *args, **kwargs)`
+::: libterraform.pool.TerraformPool.map
+    options:
+      heading_level: 3
+      show_root_full_path: false
+      show_docstring_description: false
+      show_docstring_parameters: false
+      show_docstring_returns: false
 
 将 `method` 并行地分发到 `cwds` 中的每个目录，按 `cwds` 给定的顺序返回结果迭代器，
 语义与 `concurrent.futures.Executor.map` 一致。相同的 `*args` / `**kwargs` 会传给每条
@@ -136,37 +160,19 @@ result = future.result()
 | `cwds` | `Iterable[str]` | 工作目录集合，每个目录对应一个 worker。 |
 | `*args` / `**kwargs` | | 传给每条命令的相同参数。 |
 
-返回值：`Iterator` —— 按顺序产出各目录的 `CommandResult`。
-
-### `shutdown(wait=True, *, cancel_futures=False)`
+::: libterraform.pool.TerraformPool.shutdown
+    options:
+      heading_level: 3
+      show_root_full_path: false
+      show_docstring_description: false
+      show_docstring_parameters: false
+      show_docstring_returns: false
 
 关闭底层执行器与 worker 管理器。
 
 参数：
 
-| 参数 | 类型 | 说明 |
-|---|---|---|
-| `wait` | `bool` | 是否等待已提交的任务执行完成。 |
-| `cancel_futures` | `bool` | 是否取消尚未开始执行的 future。 |
-
-### 上下文管理器
-
-`TerraformPool` 支持 `with` 语句。退出 `with` 块时会自动调用 `shutdown(wait=True)`。
-
-```python
-with TerraformPool(max_workers=4) as pool:
-    ...
-# 退出时自动关闭进程池
-```
-
-### `PoolCommand` 代理
-
-由 `pool.command(cwd)` 返回。它镜像 `TerraformCommand` 的全部公开命令方法（如
-`init`、`validate`、`plan`、`apply` 等），但每个方法都返回 `concurrent.futures.Future`
-而非直接返回结果。对返回的 future 调用 `cancel()` 即可请求取消（详见上文「取消」一节）。
-
-::: libterraform.pool.TerraformPool
-    options:
-      show_docstring_description: false
-      show_docstring_parameters: false
-      show_docstring_returns: false
+| 参数 | 类型 | 说明 | 默认值 |
+|---|---|---|---|
+| `wait` | `bool` | 是否等待已提交的任务执行完成。 | `True` |
+| `cancel_futures` | `bool` | 是否取消尚未开始执行的 future。 | `False` |

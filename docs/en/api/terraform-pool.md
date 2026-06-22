@@ -81,3 +81,26 @@ result = future.result()
 `(retcode, stdout, stderr)` tuple.
 
 ::: libterraform.pool.TerraformPool
+    options:
+      heading_level: 2
+      members: false
+
+::: libterraform.pool.TerraformPool.command
+    options:
+      heading_level: 3
+
+::: libterraform.pool.TerraformPool.submit
+    options:
+      heading_level: 3
+
+::: libterraform.pool.TerraformPool.run
+    options:
+      heading_level: 3
+
+::: libterraform.pool.TerraformPool.map
+    options:
+      heading_level: 3
+
+::: libterraform.pool.TerraformPool.shutdown
+    options:
+      heading_level: 3

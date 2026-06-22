@@ -252,22 +252,19 @@ def test_chinese_docs_cover_public_python_interfaces():
     assert "asyncio 兼容" in async_command_page
     assert "协作式取消" in async_command_page
     pool_page = read_text("docs/zh/api/terraform-pool.md")
-    assert "::: libterraform.pool.TerraformPool" in pool_page
     assert "真正并行" in pool_page
-    # Each public TerraformPool interface needs a Chinese description, because
-    # the zh page hides the English docstrings.
-    assert "## 接口" in pool_page
-    for heading in [
-        "### `TerraformPool(",
-        "### `command(",
-        "### `submit(",
-        "### `run(",
-        "### `map(",
-        "### `shutdown(",
-        "### 上下文管理器",
-        "### `PoolCommand` 代理",
+    # Each public TerraformPool interface is rendered with mkdocstrings and given
+    # a Chinese description right after it, because the zh page hides the English
+    # docstrings. Mirror the structure of the English page exactly.
+    for directive in [
+        "::: libterraform.pool.TerraformPool\n",
+        "::: libterraform.pool.TerraformPool.command\n",
+        "::: libterraform.pool.TerraformPool.submit\n",
+        "::: libterraform.pool.TerraformPool.run\n",
+        "::: libterraform.pool.TerraformPool.map\n",
+        "::: libterraform.pool.TerraformPool.shutdown\n",
     ]:
-        assert heading in pool_page
+        assert directive in pool_page
     assert "show_docstring_description: false" in command_page
     assert "show_docstring_parameters: false" in command_page
     assert "show_docstring_returns: false" in command_page
@@ -392,10 +389,23 @@ def test_api_reference_pages_generate_public_python_interfaces():
     assert "::: libterraform.async_cli.AsyncTerraformCommand" in async_command_page
     assert "asyncio-compatible" in async_command_page
     assert "cooperative cancellation" in async_command_page
-    assert "::: libterraform.pool.TerraformPool" in pool_page
     assert "true parallel Terraform operations" in pool_page
     assert "load_config_dir" in config_page
     assert "TerraformCommandError" in exceptions_page
+
+    # The English and Chinese TerraformPool pages must render the same set of
+    # interfaces in the same way, so their structure stays consistent.
+    zh_pool_page = read_text("docs/zh/api/terraform-pool.md")
+    for directive in [
+        "::: libterraform.pool.TerraformPool\n",
+        "::: libterraform.pool.TerraformPool.command\n",
+        "::: libterraform.pool.TerraformPool.submit\n",
+        "::: libterraform.pool.TerraformPool.run\n",
+        "::: libterraform.pool.TerraformPool.map\n",
+        "::: libterraform.pool.TerraformPool.shutdown\n",
+    ]:
+        assert directive in pool_page
+        assert directive in zh_pool_page
 
 
 def test_parallel_execution_docs_explain_process_isolation():
