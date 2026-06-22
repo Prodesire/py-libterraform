@@ -22,8 +22,22 @@ and runs one command against one module directory. Command results and
 Reuse a single pool to amortize the cost of starting workers and loading the
 shared library. Use it as a context manager, or call `shutdown()` explicitly.
 
-A future that has not started running can be cancelled, but a Terraform command
-already executing in a worker process cannot be interrupted cooperatively.
+## Cancellation
+
+Each submitted command is tagged with a run id. A future that has not started
+running is cancelled normally. For a command already executing in a worker
+process, `future.cancel()` asks Terraform to stop through its normal interrupt
+handling — the same cooperative cancellation used by `AsyncTerraformCommand` —
+delivered to the worker process that owns the run. It returns `False` (mirroring
+the standard library, which reports a running task as not cancelled), and the
+command then returns whatever result Terraform produces as it winds down.
+
+```python
+future = pool.command("modules/app").apply(auto_approve=True)
+# ... later, to interrupt a long-running apply:
+future.cancel()
+result = future.result()
+```
 
 ## Usage
 

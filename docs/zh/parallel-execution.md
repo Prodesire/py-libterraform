@@ -45,8 +45,17 @@ with TerraformPool(max_workers=4) as pool:
     print(version.result()[0])
 ```
 
-尚未开始执行的 future 可以被取消，但已经在 worker 进程中运行的 Terraform 命令无法
-被协作式中断。
+尚未开始执行的 future 会被正常取消。对于已经在 worker 进程中运行的命令，
+`future.cancel()` 会请求 Terraform 通过其正常的 interrupt 处理停止，并投递到持有该
+run 的 worker 进程：
+
+```python
+with TerraformPool(max_workers=2) as pool:
+    future = pool.command("modules/app").apply(auto_approve=True)
+    # ……稍后，要中断正在运行的 apply：
+    future.cancel()
+    result = future.result()
+```
 
 完整 API 见 [TerraformPool](api/terraform-pool.md)。
 
@@ -93,6 +102,17 @@ from libterraform import AsyncTerraformCommand
 
 cli = AsyncTerraformCommand("path/to/module")
 result = await cli.validate(check=True)
+```
+
+要在 asyncio 中同时获得真正并行，可传入 `TerraformPool` 作为 `pool` 后端，让被等待的
+命令在 worker 进程中执行：
+
+```python
+from libterraform import AsyncTerraformCommand, TerraformPool
+
+with TerraformPool(max_workers=4) as pool:
+    cli = AsyncTerraformCommand("path/to/module", pool=pool)
+    result = await cli.validate(check=True)
 ```
 
 使用 `TerraformPool`（或其他基于 `ProcessPoolExecutor` 的进程管理器）来实现真正

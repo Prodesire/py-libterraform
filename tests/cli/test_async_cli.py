@@ -8,10 +8,11 @@ from pathlib import Path
 
 import pytest
 
-from libterraform import AsyncTerraformCommand, TerraformCommand
+from libterraform import AsyncTerraformCommand, TerraformCommand, TerraformPool
 import libterraform.async_cli as async_cli_module
 import libterraform.cli as terraform_cli
 from libterraform.exceptions import TerraformCommandError
+from tests.cli.conftest import prepare_sleep_module
 from tests.consts import TF_SLEEP_DIR
 
 
@@ -181,6 +182,63 @@ async def test_cancelling_running_terraform_call_releases_next_command(tmp_path)
     result = await asyncio.wait_for(async_cli.version(json=False), timeout=5)
     assert result.retcode == 0
     assert "Terraform" in result.value
+
+
+@pytest.mark.asyncio
+async def test_async_pool_method_runs_in_process(cli):
+    with TerraformPool(max_workers=2) as pool:
+        async_cli = AsyncTerraformCommand(cli.cwd, pool=pool)
+        result = await async_cli.validate(check=True)
+
+    assert result.retcode == 0
+    assert result.value["valid"] is True
+
+
+@pytest.mark.asyncio
+async def test_async_pool_run_classmethod():
+    with TerraformPool(max_workers=2) as pool:
+        retcode, stdout, stderr = await AsyncTerraformCommand.run("version", pool=pool)
+
+    assert retcode == 0
+    assert "Terraform" in stdout
+
+
+@pytest.mark.asyncio
+async def test_async_pool_propagates_check_errors():
+    with TerraformPool(max_workers=2) as pool:
+        with pytest.raises(TerraformCommandError):
+            await AsyncTerraformCommand.run("invalid", check=True, pool=pool)
+
+
+@pytest.mark.asyncio
+@pytest.mark.slow
+async def test_async_pool_cancel_releases_worker(tmp_path):
+    module_dir = prepare_sleep_module(tmp_path / "async-pool-cancel")
+
+    with TerraformPool(max_workers=1) as pool:
+        async_cli = AsyncTerraformCommand(module_dir, pool=pool)
+        task = asyncio.create_task(
+            async_cli.apply(
+                auto_approve=True,
+                input=False,
+                vars={"time1": "12s", "time2": "12s"},
+            )
+        )
+
+        await asyncio.sleep(1.5)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+        # Cancelling interrupts the in-flight apply, so the single worker frees
+        # up and the next command returns promptly instead of waiting ~12s.
+        result = await asyncio.wait_for(
+            AsyncTerraformCommand.run("version", json=False, pool=pool),
+            timeout=8,
+        )
+
+    assert result[0] == 0
+    assert "Terraform" in result[1]
 
 
 def test_async_command_exposes_public_sync_methods():

@@ -19,8 +19,20 @@ from libterraform import TerraformPool
 复用同一个 pool 可以摊薄启动 worker 与加载共享库的开销。可将其用作上下文管理器，
 或显式调用 `shutdown()`。
 
-尚未开始执行的 future 可以被取消，但已经在 worker 进程中运行的 Terraform 命令无法
-被协作式中断。
+## 取消
+
+每条提交的命令都会被打上一个 run id。尚未开始执行的 future 会被正常取消。对于已经
+在 worker 进程中运行的命令，`future.cancel()` 会请求 Terraform 通过其正常的 interrupt
+处理停止——与 `AsyncTerraformCommand` 使用的协作式取消相同——并投递到持有该 run 的
+worker 进程。它返回 `False`（与标准库一致，运行中的任务被视为未取消），命令随后会在
+退出过程中返回 Terraform 产生的结果。
+
+```python
+future = pool.command("modules/app").apply(auto_approve=True)
+# ……稍后，要中断一个长时间运行的 apply：
+future.cancel()
+result = future.result()
+```
 
 ## 使用
 

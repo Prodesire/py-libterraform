@@ -47,8 +47,18 @@ with TerraformPool(max_workers=4) as pool:
     print(version.result()[0])
 ```
 
-A future that has not started running can be cancelled, but a Terraform command
-already executing in a worker process cannot be interrupted cooperatively.
+A future that has not started running is cancelled normally. For a command
+already executing in a worker process, `future.cancel()` asks Terraform to stop
+through its normal interrupt handling, delivered to the worker process that owns
+the run:
+
+```python
+with TerraformPool(max_workers=2) as pool:
+    future = pool.command("modules/app").apply(auto_approve=True)
+    # ... later, to interrupt the running apply:
+    future.cancel()
+    result = future.result()
+```
 
 See [TerraformPool](api/terraform-pool.md) for the full API.
 
@@ -97,6 +107,17 @@ from libterraform import AsyncTerraformCommand
 
 cli = AsyncTerraformCommand("path/to/module")
 result = await cli.validate(check=True)
+```
+
+To combine asyncio with true parallelism, pass a `TerraformPool` as the
+`pool` backend so awaited commands run in worker processes:
+
+```python
+from libterraform import AsyncTerraformCommand, TerraformPool
+
+with TerraformPool(max_workers=4) as pool:
+    cli = AsyncTerraformCommand("path/to/module", pool=pool)
+    result = await cli.validate(check=True)
 ```
 
 Use `TerraformPool` (or another `ProcessPoolExecutor`-based supervisor) for

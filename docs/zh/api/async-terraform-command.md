@@ -12,9 +12,10 @@ from libterraform import AsyncTerraformCommand
 
 ## 执行模型
 
-`AsyncTerraformCommand` 不会让同一个 Python 进程内的 Terraform CLI 调用变成真正并行。
-Terraform 仍然使用进程级全局状态，因此共享库内部仍会串行执行 CLI 调用。如需真正
-并行的 Terraform 操作，请使用多个进程隔离。
+`AsyncTerraformCommand` 默认把阻塞调用放到 worker thread 中执行，因此不会让同一个
+Python 进程内的 Terraform CLI 调用变成真正并行。Terraform 仍然使用进程级全局状态，
+因此共享库内部仍会串行执行 CLI 调用。如需真正并行的 Terraform 操作，可传入
+[`TerraformPool`](terraform-pool.md) 作为 `pool`，让命令在 worker 进程中执行。
 
 如果 coroutine 被取消，等待中的 task 会被取消，但该 API 不会直接终止已经在线程
 中运行的 Terraform 调用。`AsyncTerraformCommand` 会向 Terraform 的 shutdown channel 发送协作式取消
@@ -48,6 +49,21 @@ with ThreadPoolExecutor(max_workers=1) as executor:
     validation = await cli.validate(check=True)
 ```
 
+传入 `TerraformPool` 作为 `pool`，即可等待在 worker 进程中执行的命令，从而获得真正
+并行的 Terraform 执行。`AsyncTerraformCommand.run()` 同样接受 `pool` 参数：
+
+```python
+from libterraform import AsyncTerraformCommand, TerraformPool
+
+with TerraformPool(max_workers=4) as pool:
+    network = AsyncTerraformCommand("modules/network", pool=pool)
+    app = AsyncTerraformCommand("modules/app", pool=pool)
+    results = await asyncio.gather(
+        network.apply(auto_approve=True),
+        app.apply(auto_approve=True),
+    )
+```
+
 取消请求会限定到该 coroutine 启动的 Terraform run：
 
 ```python
@@ -55,7 +71,8 @@ task = asyncio.create_task(cli.apply(auto_approve=True))
 task.cancel()
 ```
 
-这会请求 Terraform 通过正常 interrupt 处理停止；它不会直接终止 worker thread。
+这会请求 Terraform 通过正常 interrupt 处理停止。使用默认线程后端时，它不会直接终止
+worker thread；使用 `pool` 后端时，该请求会投递到运行该命令的 worker 进程。
 
 ::: libterraform.async_cli.AsyncTerraformCommand
     options:

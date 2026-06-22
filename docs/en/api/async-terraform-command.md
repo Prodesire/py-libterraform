@@ -13,10 +13,11 @@ operations without blocking the event loop.
 
 ## Execution Model
 
-`AsyncTerraformCommand` does not make Terraform CLI execution parallel inside one
-Python process. Terraform still uses process-wide state, so the shared library
-serializes CLI execution. Use separate processes when you need true parallel
-Terraform operations.
+By default `AsyncTerraformCommand` runs the blocking call in a worker thread, so
+it does not make Terraform CLI execution parallel inside one Python process.
+Terraform still uses process-wide state, so the shared library serializes CLI
+execution. Pass a [`TerraformPool`](terraform-pool.md) as `pool` to run commands
+in worker processes when you need true parallel Terraform operations.
 
 If a coroutine is cancelled, the awaiting task is cancelled, but the underlying
 worker thread is not terminated directly by this API. `AsyncTerraformCommand` sends a
@@ -53,6 +54,22 @@ with ThreadPoolExecutor(max_workers=1) as executor:
     validation = await cli.validate(check=True)
 ```
 
+Pass a `TerraformPool` as `pool` to await commands that run in worker processes,
+giving true parallel Terraform execution. `AsyncTerraformCommand.run()` accepts
+`pool` as well:
+
+```python
+from libterraform import AsyncTerraformCommand, TerraformPool
+
+with TerraformPool(max_workers=4) as pool:
+    network = AsyncTerraformCommand("modules/network", pool=pool)
+    app = AsyncTerraformCommand("modules/app", pool=pool)
+    results = await asyncio.gather(
+        network.apply(auto_approve=True),
+        app.apply(auto_approve=True),
+    )
+```
+
 Cancellation requests are scoped to the Terraform run started by the coroutine:
 
 ```python
@@ -60,7 +77,9 @@ task = asyncio.create_task(cli.apply(auto_approve=True))
 task.cancel()
 ```
 
-This asks Terraform to stop through its normal interrupt handling. It is not a
-direct termination of the worker thread.
+This asks Terraform to stop through its normal interrupt handling. With the
+default thread backend it is not a direct termination of the worker thread; with
+a `pool` backend the request is delivered to the worker process running the
+command.
 
 ::: libterraform.async_cli.AsyncTerraformCommand

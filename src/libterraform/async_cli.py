@@ -6,23 +6,36 @@ from typing import Any, Optional, Sequence, Tuple
 
 from libterraform.cli import TerraformCommand, _cancel_cli_run, _current_run_id
 from libterraform.common import CmdType
+from libterraform.pool import TerraformPool
 
 
 class AsyncTerraformCommand:
     """Async-compatible Terraform command line API.
 
-    This class mirrors :class:`libterraform.cli.TerraformCommand` and runs the
-    synchronous Terraform call in a worker thread so callers can await it without
-    blocking the event loop. Terraform CLI execution is still serialized inside
-    the shared library because Terraform uses process-wide state.
+    This class mirrors :class:`libterraform.cli.TerraformCommand` and awaits the
+    Terraform call without blocking the event loop.
+
+    By default the synchronous call runs in a worker thread, so Terraform CLI
+    execution is still serialized inside the shared library because Terraform
+    uses process-wide state. Pass a :class:`~libterraform.pool.TerraformPool` as
+    ``pool`` to run commands in worker processes instead, which gives true
+    parallel Terraform execution.
 
     Cancelling the awaiting coroutine requests cooperative cancellation for the
-    corresponding Terraform run. The worker thread is not terminated directly.
+    corresponding Terraform run. With a thread backend the worker thread is not
+    terminated directly; with a process pool the owning worker is asked to
+    interrupt Terraform through its normal shutdown handling.
     """
 
-    def __init__(self, cwd=None, executor: Optional[Executor] = None):
+    def __init__(
+        self,
+        cwd=None,
+        executor: Optional[Executor] = None,
+        pool: Optional[TerraformPool] = None,
+    ):
         self.cwd = cwd
         self.executor = executor
+        self._pool = pool
         self._sync_cli = TerraformCommand(cwd)
 
     def __getattr__(self, name: str) -> Any:
@@ -34,6 +47,10 @@ class AsyncTerraformCommand:
             return attr
 
         async def async_method(*args, **kwargs):
+            if self._pool is not None:
+                return await _await_pool_future(
+                    self._pool._submit_method(self.cwd, name, args, kwargs)
+                )
             return await self._call(
                 attr,
                 *args,
@@ -78,8 +95,21 @@ class AsyncTerraformCommand:
         check: bool = False,
         json=False,
         executor: Optional[Executor] = None,
+        pool: Optional[TerraformPool] = None,
     ) -> Tuple[int, str, str]:
         """Run command with args without blocking the event loop."""
+
+        if pool is not None:
+            return await _await_pool_future(
+                pool.run(
+                    cmd,
+                    args=args,
+                    options=options,
+                    chdir=chdir,
+                    check=check,
+                    json=json,
+                )
+            )
 
         return await cls._call(
             TerraformCommand.run,
@@ -93,11 +123,24 @@ class AsyncTerraformCommand:
         )
 
 
+async def _await_pool_future(future):
+    """Await a pool future, requesting cooperative cancellation on cancel."""
+    try:
+        return await asyncio.wrap_future(future)
+    except asyncio.CancelledError:
+        future.cancel()
+        raise
+
+
 def _make_async_method(name):
     sync_method = getattr(TerraformCommand, name)
 
     @wraps(sync_method)
     async def async_method(self, *args, **kwargs):
+        if self._pool is not None:
+            return await _await_pool_future(
+                self._pool._submit_method(self.cwd, name, args, kwargs)
+            )
         return await self._call(
             getattr(self._sync_cli, name),
             *args,

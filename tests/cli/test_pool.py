@@ -1,8 +1,6 @@
 import inspect
-import shutil
 import time
 from concurrent.futures import Future
-from pathlib import Path
 
 import pytest
 
@@ -10,26 +8,7 @@ from libterraform import TerraformCommand, TerraformPool
 from libterraform.cli import CommandResult
 from libterraform.exceptions import TerraformCommandError
 from libterraform.pool import PoolCommand
-from tests.consts import TF_SLEEP_DIR
-
-
-def _prepare_module(source_dir: Path, module_dir: Path) -> Path:
-    module_dir.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(source_dir / "main.tf", module_dir / "main.tf")
-    if (source_dir / ".terraform.lock.hcl").exists():
-        shutil.copyfile(
-            source_dir / ".terraform.lock.hcl",
-            module_dir / ".terraform.lock.hcl",
-        )
-    if (source_dir / ".terraform").exists():
-        shutil.copytree(
-            source_dir / ".terraform",
-            module_dir / ".terraform",
-            dirs_exist_ok=True,
-        )
-    if not (module_dir / ".terraform").exists():
-        TerraformCommand(module_dir).init(check=True)
-    return module_dir
+from tests.cli.conftest import prepare_sleep_module
 
 
 def test_pool_run_returns_version():
@@ -102,9 +81,8 @@ def test_pool_command_proxy_exposes_public_sync_methods():
 
 @pytest.mark.slow
 def test_pool_runs_terraform_in_parallel(tmp_path):
-    source_dir = Path(TF_SLEEP_DIR)
-    module_a = _prepare_module(source_dir, tmp_path / "parallel-a")
-    module_b = _prepare_module(source_dir, tmp_path / "parallel-b")
+    module_a = prepare_sleep_module(tmp_path / "parallel-a")
+    module_b = prepare_sleep_module(tmp_path / "parallel-b")
 
     apply_options = dict(
         auto_approve=True, input=False, vars={"time1": "3s", "time2": "3s"}
@@ -123,6 +101,28 @@ def test_pool_runs_terraform_in_parallel(tmp_path):
     # Two ~3s applies would take ~6s sequentially; running them in separate
     # processes should finish well under that.
     assert elapsed < 5.5
+
+
+@pytest.mark.slow
+def test_pool_cancel_running_command_interrupts_terraform(tmp_path):
+    module = prepare_sleep_module(tmp_path / "cancel-sync")
+
+    with TerraformPool(max_workers=1) as pool:
+        future = pool.command(module).apply(
+            auto_approve=True, input=False, vars={"time1": "12s", "time2": "12s"}
+        )
+        # Let the apply reach the in-progress time_sleep resources.
+        time.sleep(1.5)
+
+        future.cancel()
+        start = time.monotonic()
+        result = future.result(timeout=8)
+        elapsed = time.monotonic() - start
+
+    # If cancellation did not interrupt Terraform, the ~12s apply would still be
+    # running and result(timeout=8) would raise instead of returning here.
+    assert isinstance(result, CommandResult)
+    assert elapsed < 6
 
 
 def test_pool_proxy_methods_are_not_coroutines():
