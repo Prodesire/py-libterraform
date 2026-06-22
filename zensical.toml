@@ -21,8 +21,8 @@ nav = [
     { "TerraformCommand" = "api/terraform-command.md" },
     { "AsyncTerraformCommand" = "api/async-terraform-command.md" },
     { "TerraformPool" = "api/terraform-pool.md" },
-    { "Results & Streaming" = "api/results.md" },
     { "TerraformConfig" = "api/terraform-config.md" },
+    { "Results & Streaming" = "api/results.md" },
     { "Exceptions" = "api/exceptions.md" },
   ] },
   { "Development" = [

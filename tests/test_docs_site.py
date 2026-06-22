@@ -496,6 +496,9 @@ def test_docs_workflow_builds_and_deploys_github_pages():
 
     assert "uv run --group docs zensical build --strict -f zensical.toml" in workflow
     assert "uv run --group docs zensical build --strict -f zensical.zh.toml" in workflow
+    # The shared assets (logo, favicon, language switcher) live outside docs_dir,
+    # so the deploy must copy them into the built site like `make doc-build` does.
+    assert "cp -R docs/assets/. site/assets/" in workflow
     assert "mkdocs" not in workflow
     assert "actions/configure-pages@v6" in workflow
     assert "actions/upload-pages-artifact@v5" in workflow

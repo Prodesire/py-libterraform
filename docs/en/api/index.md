@@ -22,9 +22,9 @@ Exception classes are available from `libterraform.exceptions`.
   command execution for asyncio applications.
 - [TerraformPool](terraform-pool.md) covers process-based parallel execution of
   Terraform commands.
+- [TerraformConfig](terraform-config.md) covers Terraform configuration parsing.
 - [Results & Streaming](results.md) covers the structured `PlanResult` /
   `ApplyResult` types and the `TerraformStream` streaming helper.
-- [TerraformConfig](terraform-config.md) covers Terraform configuration parsing.
 - [Exceptions](exceptions.md) covers package exception types.
 
 The reference pages are generated from the Python source and docstrings with

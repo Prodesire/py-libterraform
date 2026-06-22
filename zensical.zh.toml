@@ -21,8 +21,8 @@ nav = [
     { "TerraformCommand" = "api/terraform-command.md" },
     { "AsyncTerraformCommand" = "api/async-terraform-command.md" },
     { "TerraformPool" = "api/terraform-pool.md" },
-    { "结果与流式" = "api/results.md" },
     { "TerraformConfig" = "api/terraform-config.md" },
+    { "结果与流式" = "api/results.md" },
     { "异常" = "api/exceptions.md" },
   ] },
   { "开发" = [
