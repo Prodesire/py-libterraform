@@ -61,6 +61,11 @@ with TerraformPool(max_workers=4) as pool:
         print(result.value["valid"])
 ```
 
+pool 会启动 worker 进程，因此上述代码必须运行在 `if __name__ == "__main__":`
+保护之下。[快速开始](https://prodesire.github.io/py-libterraform/zh/quickstart/)
+可在几秒内创建一个可运行的模块，[并行执行](https://prodesire.github.io/py-libterraform/zh/parallel-execution/)
+提供了完整的 pool 示例。
+
 ## 贡献
 
 安装 [uv](https://docs.astral.sh/uv/getting-started/installation/)，然后：

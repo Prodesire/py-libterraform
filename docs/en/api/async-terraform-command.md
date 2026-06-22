@@ -56,7 +56,9 @@ with ThreadPoolExecutor(max_workers=1) as executor:
 
 Pass a `TerraformPool` as `pool` to await commands that run in worker processes,
 giving true parallel Terraform execution. `AsyncTerraformCommand.run()` accepts
-`pool` as well:
+`pool` as well. A pool starts worker processes, so this program must run under an
+`if __name__ == "__main__":` guard; see [Parallel Execution](../parallel-execution.md)
+for a complete, runnable setup.
 
 ```python
 from libterraform import AsyncTerraformCommand, TerraformPool

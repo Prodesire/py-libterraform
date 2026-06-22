@@ -22,6 +22,12 @@ and runs one command against one module directory. Command results and
 Reuse a single pool to amortize the cost of starting workers and loading the
 shared library. Use it as a context manager, or call `shutdown()` explicitly.
 
+The examples below use illustrative paths like `modules/app`; replace them with
+your own initialized module directories. A program that uses `TerraformPool` must
+also run under an `if __name__ == "__main__":` guard, because the pool starts
+worker processes. See [Parallel Execution](../parallel-execution.md) for a
+complete, runnable setup.
+
 ## Cancellation
 
 Each submitted command is tagged with a run id. A future that has not started

@@ -14,14 +14,57 @@ independent module operations run at the same time. Each worker imports
 one module directory; command results and `check=True` errors come back to the
 parent process unchanged.
 
-Reuse a single pool to amortize the cost of starting workers and loading the
-shared library. Use it as a context manager (which shuts the pool down on exit),
-or call `shutdown()` explicitly.
+## Before you start
 
-Keep Terraform state, plugin cache, and working directories separated per
-operation unless you already know those operations are safe to share. For
-operations that can change infrastructure or state, prefer one module directory
-per worker and let Terraform backend locking protect shared remote state.
+The examples below need two things.
+
+**Initialized module directories.** Each command runs against a module that has
+already been initialized with `init`. The helper below creates minimal modules
+that run anywhere — they use Terraform's built-in `terraform_data` resource, so
+they need no cloud credentials and download no providers.
+
+**A `__main__` guard.** A pool starts worker processes, and on macOS and Windows
+those workers start a fresh Python interpreter that re-imports the program.
+Without an `if __name__ == "__main__":` guard, that re-import would run the
+top-level code again in every worker. So a program that uses `TerraformPool` must
+put its work behind that guard (or inside a function the guard calls).
+
+Putting both together, here is a complete program that validates three modules in
+parallel:
+
+```python
+import os
+import tempfile
+
+from libterraform import TerraformCommand, TerraformPool
+
+
+def make_module() -> str:
+    """Create and initialize a minimal module; return its directory."""
+    path = tempfile.mkdtemp()
+    with open(os.path.join(path, "main.tf"), "w") as f:
+        f.write('resource "terraform_data" "example" {\n  input = "ok"\n}\n')
+    TerraformCommand(path).init(check=True)
+    return path
+
+
+def main() -> None:
+    modules = [make_module() for _ in range(3)]
+
+    with TerraformPool(max_workers=3) as pool:
+        for module, result in zip(modules, pool.map("validate", modules, check=True)):
+            print(os.path.basename(module), result.value["valid"])
+
+
+if __name__ == "__main__":
+    main()
+```
+
+Reuse a single pool to amortize the cost of starting workers and loading the
+shared library, and use it as a context manager so it shuts down on exit. Keep
+Terraform state, plugin cache, and working directories separated per operation
+unless those operations are known to be safe to share. The remaining snippets
+show the body that goes inside `main()` and reuse the `modules` list above.
 
 ## Synchronous: TerraformPool
 
@@ -32,45 +75,39 @@ the results in order, mirroring `concurrent.futures.Executor.map`. The same
 keyword arguments are passed to every command:
 
 ```python
-from pathlib import Path
-
-from libterraform import TerraformPool
-
-module_paths = ["modules/network", "modules/app", "modules/data"]
-
 with TerraformPool(max_workers=4) as pool:
-    for path, result in zip(module_paths, pool.map("validate", module_paths, check=True)):
-        print(Path(path).name, result.value["valid"])
+    for module, result in zip(modules, pool.map("validate", modules, check=True)):
+        print(os.path.basename(module), result.value["valid"])
 ```
 
 Iterating re-raises the first command error encountered, so wrap a single module
-in `try`/`except TerraformCommandError` if you want to keep going.
+in `try` / `except TerraformCommandError` to keep going after a failure.
 
 ### Submit different commands
 
 `pool.command(cwd)` returns a `cwd`-bound proxy that mirrors `TerraformCommand`,
 but every method returns a `concurrent.futures.Future` instead of blocking. This
-lets you submit different commands to different modules and collect their results
-when they are ready:
+lets different commands run against different modules and report their results as
+they finish:
 
 ```python
 from concurrent.futures import as_completed
 
 with TerraformPool(max_workers=4) as pool:
     futures = {
-        pool.command("modules/network").apply(auto_approve=True): "network",
-        pool.command("modules/app").apply(auto_approve=True): "app",
+        pool.command(modules[0]).apply(auto_approve=True, input=False): "first",
+        pool.command(modules[1]).apply(auto_approve=True, input=False): "second",
     }
     for future in as_completed(futures):
         print(futures[future], future.result().retcode)
 ```
 
-Two lower-level entry points are available when a proxy does not fit:
+Two lower-level entry points help when a proxy does not fit:
 
 ```python
 with TerraformPool(max_workers=4) as pool:
     # submit() takes the method name as a string (useful when it is dynamic).
-    validated = pool.submit("modules/app", "validate", check=True)
+    validated = pool.submit(modules[0], "validate", check=True)
 
     # run() mirrors TerraformCommand.run() and resolves to (retcode, stdout, stderr).
     version = pool.run("version")
@@ -90,8 +127,8 @@ then returns whatever result Terraform produces as it winds down:
 
 ```python
 with TerraformPool(max_workers=2) as pool:
-    future = pool.command("modules/app").apply(auto_approve=True)
-    # ... later, to interrupt the running apply:
+    future = pool.command(modules[0]).apply(auto_approve=True, input=False)
+    # ... later, to interrupt a long-running apply:
     future.cancel()
     result = future.result()
 ```
@@ -107,28 +144,37 @@ inside the process:
 ```python
 from libterraform import AsyncTerraformCommand
 
-cli = AsyncTerraformCommand("path/to/module")
-result = await cli.validate(check=True)
+cli = AsyncTerraformCommand(modules[0])
+validation = await cli.validate(check=True)
 ```
 
 To combine asyncio with true parallelism, pass a `TerraformPool` as the `pool`
 backend. Awaited commands then run in the pool's worker processes, so awaiting
-several of them concurrently gives genuine parallel Terraform execution:
+several of them concurrently gives genuine parallel Terraform execution. The same
+`__main__` guard applies, and the async entry point is `asyncio.run(main())`:
 
 ```python
 import asyncio
 
 from libterraform import AsyncTerraformCommand, TerraformPool
 
-with TerraformPool(max_workers=4) as pool:
-    network = AsyncTerraformCommand("modules/network", pool=pool)
-    app = AsyncTerraformCommand("modules/app", pool=pool)
 
-    results = await asyncio.gather(
-        network.apply(auto_approve=True),
-        app.apply(auto_approve=True),
-    )
-    print([r.retcode for r in results])
+async def main() -> None:
+    modules = [make_module() for _ in range(2)]
+
+    with TerraformPool(max_workers=2) as pool:
+        first = AsyncTerraformCommand(modules[0], pool=pool)
+        second = AsyncTerraformCommand(modules[1], pool=pool)
+
+        results = await asyncio.gather(
+            first.apply(auto_approve=True, input=False),
+            second.apply(auto_approve=True, input=False),
+        )
+        print([result.retcode for result in results])
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
 ```
 
 `AsyncTerraformCommand.run()` accepts `pool` as well:

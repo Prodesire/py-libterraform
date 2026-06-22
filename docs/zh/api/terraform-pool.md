@@ -19,6 +19,10 @@ from libterraform import TerraformPool
 复用同一个 pool 可以摊薄启动 worker 与加载共享库的开销。可将其用作上下文管理器，
 或显式调用 `shutdown()`。
 
+下面的示例使用 `modules/app` 等示意路径，请替换为自己已初始化的模块目录。此外，
+使用 `TerraformPool` 的程序必须运行在 `if __name__ == "__main__":` 保护之下，因为
+pool 会启动 worker 进程。完整可运行的搭建方式见[并行执行](../parallel-execution.md)。
+
 ## 取消
 
 每条提交的命令都会被打上一个 run id。尚未开始执行的 future 会被正常取消。对于已经

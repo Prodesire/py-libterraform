@@ -947,8 +947,8 @@ state 文件创建备份。
 
 参考 <https://developer.hashicorp.com/terraform/cli/commands/state/push>
 
-从指定路径的本地 state 文件更新远端 state。此命令会保护你免于写入更旧的
-serial 或不同的 state 文件世系，除非指定了 `force`。
+从指定路径的本地 state 文件更新远端 state。除非指定了 `force`，此命令会避免写入
+更旧的 serial 或不同世系的 state 文件。
 
 此命令也可用于本地 state（会覆盖本地 state），但此用例下用处较小。
 
@@ -1107,7 +1107,7 @@ subcommands 由 Stacks plugin 实现决定，可传入 `args=["-help"]` 查看�
 参考 <https://developer.hashicorp.com/terraform/cli/commands/taint>
 
 Terraform 使用 "tainted" 来描述可能不完全正常运行的资源实例——要么因为
-其创建部分失败，要么因为你使用此命令手动将其标记为 tainted。
+其创建部分失败，要么因为通过此命令被手动标记为 tainted。
 
 此命令不会直接修改基础设施，但后续的 Terraform plan 将包含销毁远端对象并
 创建新对象来替换它的操作。

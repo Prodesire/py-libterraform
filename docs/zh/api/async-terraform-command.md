@@ -50,7 +50,9 @@ with ThreadPoolExecutor(max_workers=1) as executor:
 ```
 
 传入 `TerraformPool` 作为 `pool`，即可等待在 worker 进程中执行的命令，从而获得真正
-并行的 Terraform 执行。`AsyncTerraformCommand.run()` 同样接受 `pool` 参数：
+并行的 Terraform 执行。`AsyncTerraformCommand.run()` 同样接受 `pool` 参数。pool 会
+启动 worker 进程，因此该程序必须运行在 `if __name__ == "__main__":` 保护之下；完整
+可运行的搭建方式见[并行执行](../parallel-execution.md)。
 
 ```python
 from libterraform import AsyncTerraformCommand, TerraformPool
