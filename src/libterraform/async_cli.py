@@ -12,12 +12,12 @@ from libterraform.pool import TerraformPool
 class AsyncTerraformCommand:
     """Async-compatible Terraform command line API.
 
-    This class mirrors :class:`libterraform.cli.TerraformCommand` and awaits the
+    This class mirrors `TerraformCommand` and awaits the
     Terraform call without blocking the event loop.
 
     By default the synchronous call runs in a worker thread, so Terraform CLI
     execution is still serialized inside the shared library because Terraform
-    uses process-wide state. Pass a :class:`~libterraform.pool.TerraformPool` as
+    uses process-wide state. Pass a `TerraformPool` as
     ``pool`` to run commands in worker processes instead, which gives true
     parallel Terraform execution.
 

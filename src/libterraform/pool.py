@@ -2,19 +2,19 @@
 
 Terraform reuses process-wide state (working directory, stdio, plugin clients,
 signal handling), so CLI execution is serialized inside a single Python process
-even when called from multiple threads. :class:`TerraformPool` runs each command
+even when called from multiple threads. `TerraformPool` runs each command
 in its own worker process so independent module operations can truly run in
 parallel.
 
 Each worker process imports ``libterraform``, builds its own
-:class:`~libterraform.cli.TerraformCommand`, and runs one command against one
+`TerraformCommand`, and runs one command against one
 module directory. Command results and ``check=True`` errors are returned to the
 parent process unchanged.
 
 Each submitted command is tagged with a run id. Calling ``future.cancel()`` on a
 command that is already running asks Terraform to stop through its normal
 interrupt handling (the same cooperative cancellation used by
-:class:`~libterraform.async_cli.AsyncTerraformCommand`), delivered to the worker
+`AsyncTerraformCommand`), delivered to the worker
 process that owns the run.
 
 Example::
@@ -151,11 +151,11 @@ def _install_cooperative_cancel(future, run_id, registry):
 
 
 class PoolCommand:
-    """A ``cwd``-bound proxy whose methods submit work to a :class:`TerraformPool`.
+    """A ``cwd``-bound proxy whose methods submit work to a `TerraformPool`.
 
-    It mirrors :class:`~libterraform.cli.TerraformCommand`, but every command
-    method returns a :class:`concurrent.futures.Future` resolving to the usual
-    :class:`~libterraform.cli.CommandResult` (or raising the usual error) instead
+    It mirrors `TerraformCommand`, but every command
+    method returns a `concurrent.futures.Future` resolving to the usual
+    `CommandResult` (or raising the usual error) instead
     of blocking until the command finishes.
     """
 
@@ -196,9 +196,9 @@ for _name, _value in vars(TerraformCommand).items():
 class TerraformPool:
     """Run Terraform commands in parallel across a pool of worker processes.
 
-    The pool owns a :class:`concurrent.futures.ProcessPoolExecutor`; reuse a
+    The pool owns a `concurrent.futures.ProcessPoolExecutor`; reuse a
     single pool to amortize the cost of starting workers and loading the shared
-    library. Use it as a context manager, or call :meth:`shutdown` explicitly.
+    library. Use it as a context manager, or call `shutdown()` explicitly.
 
     Cancellation: a future that has not started running is cancelled normally.
     For a command already executing in a worker process, ``future.cancel()``
@@ -238,8 +238,8 @@ class TerraformPool:
         """Submit a single command method for ``cwd`` and return its future.
 
         :param cwd: Working directory for the command (passed to
-            :class:`~libterraform.cli.TerraformCommand`).
-        :param method: Name of the :class:`~libterraform.cli.TerraformCommand`
+            `TerraformCommand`).
+        :param method: Name of the `TerraformCommand`
             method to call, e.g. ``"validate"`` or ``"apply"``.
         """
         return self._submit_method(cwd, method, args, kwargs)
@@ -253,7 +253,7 @@ class TerraformPool:
         check: bool = False,
         json=False,
     ) -> Future:
-        """Mirror :meth:`TerraformCommand.run`, returning a future instead.
+        """Mirror `TerraformCommand.run()`, returning a future instead.
 
         The future resolves to the ``(retcode, stdout, stderr)`` tuple.
         """
@@ -271,7 +271,7 @@ class TerraformPool:
         """Run ``method`` against each directory in ``cwds`` in parallel.
 
         Returns an iterator over the results in the order ``cwds`` were given,
-        mirroring :meth:`concurrent.futures.Executor.map`. The same ``args`` and
+        mirroring `concurrent.futures.Executor.map()`. The same ``args`` and
         ``kwargs`` are passed to every command. Iterating re-raises the first
         command error encountered.
         """
