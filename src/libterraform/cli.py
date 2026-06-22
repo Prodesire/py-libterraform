@@ -7,6 +7,16 @@ from typing import List, Optional, Sequence, Tuple, Union
 from libterraform import _lib_tf
 from libterraform.common import WINDOWS, CmdType, json_loads
 from libterraform.exceptions import TerraformCommandError, TerraformFdReadError
+from libterraform.models import (
+    ChangeSummary,
+    OutputChange,
+    ResourceChange,
+    parse_applied_changes,
+    parse_drift,
+    parse_output_changes,
+    parse_planned_changes,
+    parse_summary,
+)
 
 _run_cli = _lib_tf.RunCli
 _run_cli.argtypes = [c_int64, POINTER(c_char_p), c_int64, c_int64]
@@ -51,6 +61,68 @@ class CommandResult:
 
     def __repr__(self):
         return f"<CommandResult retcode={self.retcode!r} json={self.json!r}>"
+
+
+class PlanResult(CommandResult):
+    """Result of :meth:`TerraformCommand.plan`.
+
+    Adds structured, lazily-parsed views over the ``-json`` output. The
+    structured properties are empty when ``json=False`` was used. ``value`` still
+    holds the raw parsed events, exactly like a plain :class:`CommandResult`.
+    """
+
+    __slots__ = ()
+
+    @property
+    def changes(self) -> List[ResourceChange]:
+        """Resources the plan would change, as :class:`ResourceChange` items."""
+        return parse_planned_changes(self.value)
+
+    @property
+    def drift(self) -> List[ResourceChange]:
+        """Resources that have drifted from the recorded state."""
+        return parse_drift(self.value)
+
+    @property
+    def summary(self) -> ChangeSummary:
+        """Add / change / remove / import counts for the plan."""
+        return parse_summary(self.value, operation="plan")
+
+    @property
+    def outputs(self) -> List[OutputChange]:
+        """Planned changes to root module outputs."""
+        return parse_output_changes(self.value)
+
+    def __repr__(self):
+        return f"<PlanResult retcode={self.retcode!r} json={self.json!r}>"
+
+
+class ApplyResult(CommandResult):
+    """Result of :meth:`TerraformCommand.apply` and :meth:`TerraformCommand.destroy`.
+
+    Adds structured, lazily-parsed views over the ``-json`` output. The
+    structured properties are empty when ``json=False`` was used.
+    """
+
+    __slots__ = ()
+
+    @property
+    def changes(self) -> List[ResourceChange]:
+        """Resources that were applied, as :class:`ResourceChange` items."""
+        return parse_applied_changes(self.value)
+
+    @property
+    def summary(self) -> ChangeSummary:
+        """Add / change / remove / import counts for the apply."""
+        return parse_summary(self.value, operation="apply")
+
+    @property
+    def outputs(self) -> List[OutputChange]:
+        """Changes to root module outputs."""
+        return parse_output_changes(self.value)
+
+    def __repr__(self):
+        return f"<ApplyResult retcode={self.retcode!r} json={self.json!r}>"
 
 
 class TerraformCommand:
@@ -409,7 +481,7 @@ class TerraformCommand:
         parallelism: int = None,
         state: str = None,
         **options,
-    ) -> CommandResult:
+    ) -> PlanResult:
         """Refer to https://developer.hashicorp.com/terraform/cli/commands/plan
 
         Generates a speculative execution plan, showing what actions Terraform
@@ -496,7 +568,7 @@ class TerraformCommand:
             "plan", options=options, chdir=self.cwd, check=check, json=json
         )
         value = json_loads(stdout, split=True) if json else stdout
-        return CommandResult(retcode, value, stderr, json=json)
+        return PlanResult(retcode, value, stderr, json=json)
 
     def query(
         self,
@@ -596,7 +668,7 @@ class TerraformCommand:
         vars: dict = None,
         var_files: List[str] = None,
         **options,
-    ) -> CommandResult:
+    ) -> ApplyResult:
         """Refer to https://developer.hashicorp.com/terraform/cli/commands/apply
 
         Creates or updates infrastructure according to Terraform configuration
@@ -665,7 +737,7 @@ class TerraformCommand:
             "apply", args, options=options, chdir=self.cwd, check=check, json=json
         )
         value = json_loads(stdout, split=True) if json else stdout
-        return CommandResult(retcode, value, stderr, json=json)
+        return ApplyResult(retcode, value, stderr, json=json)
 
     def destroy(
         self,
@@ -682,7 +754,7 @@ class TerraformCommand:
         state: str = None,
         state_out: str = None,
         **options,
-    ) -> CommandResult:
+    ) -> ApplyResult:
         """Refer to https://developer.hashicorp.com/terraform/cli/commands/destroy
 
         Destroy Terraform-managed infrastructure.
@@ -735,7 +807,7 @@ class TerraformCommand:
             "destroy", options=options, chdir=self.cwd, check=check, json=json
         )
         value = json_loads(stdout, split=True) if json else stdout
-        return CommandResult(retcode, value, stderr, json=json)
+        return ApplyResult(retcode, value, stderr, json=json)
 
     def fmt(
         self,
