@@ -103,27 +103,26 @@ def test_release_workflow_retries_pypi_publish_three_times():
 
     assert "for attempt in 1 2 3; do" in publish_job
     assert (
-        "uv publish --trusted-publishing automatic "
+        "uv publish --trusted-publishing never "
         "--check-url https://pypi.org/simple/ dist/* && exit 0"
     ) in publish_job
     assert 'if [ "$attempt" -lt 3 ]; then' in publish_job
     assert "exit 1" in publish_job
 
 
-def test_release_workflow_uses_trusted_publishing_without_pypi_token():
+def test_release_workflow_uses_pypi_token_secret():
     content = (ROOT / ".github" / "workflows" / "release.yml").read_text(
         encoding="utf-8"
     )
     publish_job = content.split("  publish:", maxsplit=1)[1]
 
     assert "permissions:" in publish_job
-    assert "id-token: write" in publish_job
     assert "contents: write" in publish_job
+    assert "id-token: write" not in publish_job
     assert "environment:" in publish_job
     assert "name: pypi" in publish_job
-    assert "UV_PUBLISH_TOKEN" not in publish_job
-    assert "secrets.PYPI_TOKEN" not in publish_job
-    assert "--trusted-publishing automatic" in publish_job
+    assert "UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}" in publish_job
+    assert "--trusted-publishing never" in publish_job
 
 
 def test_release_workflow_normalizes_linux_wheel_tags_with_script():

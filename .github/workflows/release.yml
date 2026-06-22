@@ -83,7 +83,6 @@ jobs:
       url: https://pypi.org/p/libterraform
     permissions:
       contents: write
-      id-token: write
     steps:
       - name: Checkout repository code
         uses: actions/checkout@v5
@@ -102,9 +101,11 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
       - name: Publish to PyPI
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
         run: |
           for attempt in 1 2 3; do
-            uv publish --trusted-publishing automatic --check-url https://pypi.org/simple/ dist/* && exit 0
+            uv publish --trusted-publishing never --check-url https://pypi.org/simple/ dist/* && exit 0
             if [ "$attempt" -lt 3 ]; then
               sleep $((attempt * 60))
             fi
