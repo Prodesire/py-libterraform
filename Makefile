@@ -39,6 +39,8 @@ doc-build: ## Build the documentation site
 	rm -rf site
 	uv run $(UV_PYTHON_FLAG) --group docs zensical build --strict -f zensical.toml
 	uv run $(UV_PYTHON_FLAG) --group docs zensical build --strict -f zensical.zh.toml
+	mkdir -p site/assets
+	cp -R docs/assets/. site/assets/
 
 doc-serve: ## Serve the documentation site locally
 	$(MAKE) doc-build

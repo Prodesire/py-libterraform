@@ -1,5 +1,9 @@
 # Python libterraform
 
+<p align="center">
+  <img src="./assets/py-libterraform-logo.png" alt="Python libterraform logo" width="180" />
+</p>
+
 `libterraform` is a Python binding for Terraform. It bundles Terraform as a
 shared library and exposes Python APIs for running Terraform CLI commands and
 parsing Terraform configuration directories.

@@ -7,7 +7,7 @@ repo_name = "Prodesire/py-libterraform"
 edit_uri = "edit/main/docs/zh/"
 docs_dir = "docs/zh"
 site_dir = "site/zh"
-extra_javascript = ["assets/language-redirect.js"]
+extra_javascript = ["../assets/language-redirect.js"]
 nav = [
   { "首页" = "index.md" },
   { "入门" = [
@@ -31,6 +31,8 @@ nav = [
 
 [project.theme]
 language = "zh"
+logo = "../assets/py-libterraform-logo.png"
+favicon = "../assets/py-libterraform-favicon.png"
 features = [
   "navigation.sections",
   "navigation.indexes",

@@ -1,5 +1,9 @@
 # Python libterraform
 
+<p align="center">
+  <img src="../assets/py-libterraform-logo.png" alt="Python libterraform logo" width="180" />
+</p>
+
 `libterraform` 是 Terraform 的 Python 绑定。它把 Terraform 打包为共享库，
 并提供 Python API 来执行 Terraform CLI 命令、解析 Terraform 配置目录。
 

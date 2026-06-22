@@ -7,6 +7,9 @@ import tomli
 
 
 ROOT = Path(__file__).resolve().parents[1]
+THEME_LOGO = "assets/py-libterraform-logo.png"
+THEME_FAVICON = "assets/py-libterraform-favicon.png"
+LANGUAGE_REDIRECT = "assets/language-redirect.js"
 
 
 def read_text(path: str) -> str:
@@ -48,6 +51,22 @@ def public_methods(path: str, class_name: str) -> list[str]:
     raise AssertionError(f"{class_name} not found in {path}")
 
 
+def assert_theme_assets(project: dict[str, Any]) -> None:
+    asset_prefix = "../" if project["docs_dir"] == "docs/zh" else ""
+
+    assert project["extra_javascript"] == [f"{asset_prefix}{LANGUAGE_REDIRECT}"]
+    assert project["theme"]["logo"] == f"{asset_prefix}{THEME_LOGO}"
+    assert project["theme"]["favicon"] == f"{asset_prefix}{THEME_FAVICON}"
+
+
+def test_docs_shared_assets_are_stored_once():
+    assert (ROOT / "docs" / THEME_LOGO).is_file()
+    assert (ROOT / "docs" / THEME_FAVICON).is_file()
+    assert (ROOT / "docs" / LANGUAGE_REDIRECT).is_file()
+    assert not (ROOT / "docs/en/assets").exists()
+    assert not (ROOT / "docs/zh/assets").exists()
+
+
 def test_zensical_config_generates_api_docs_for_project_pages_url():
     assert not (ROOT / "mkdocs.yml").exists()
 
@@ -60,7 +79,7 @@ def test_zensical_config_generates_api_docs_for_project_pages_url():
     assert project["docs_dir"] == "docs/en"
     assert project["site_dir"] == "site"
     assert project["edit_uri"] == "edit/main/docs/en/"
-    assert project["extra_javascript"] == ["assets/language-redirect.js"]
+    assert_theme_assets(project)
     assert {"TerraformCommand": "api/terraform-command.md"} in project["nav"][2][
         "API Reference"
     ]
@@ -102,8 +121,8 @@ def test_chinese_zensical_config_uses_separate_language_site():
     assert project["docs_dir"] == "docs/zh"
     assert project["site_dir"] == "site/zh"
     assert project["edit_uri"] == "edit/main/docs/zh/"
-    assert project["extra_javascript"] == ["assets/language-redirect.js"]
     assert project["theme"]["language"] == "zh"
+    assert_theme_assets(project)
     assert "首页" in titles
     assert "安装" in titles
     assert "快速开始" in titles
@@ -129,7 +148,7 @@ def test_chinese_zensical_config_uses_separate_language_site():
 
 
 def test_docs_language_redirect_script_rewrites_local_alternate_links():
-    script = read_text("docs/en/assets/language-redirect.js")
+    script = read_text("docs/assets/language-redirect.js")
 
     assert 'var productionOrigin = "https://prodesire.github.io"' in script
     assert 'var productionBasePath = "/py-libterraform"' in script
@@ -152,25 +171,21 @@ def test_docs_language_redirect_script_rewrites_local_alternate_links():
 
 
 def test_docs_language_redirect_script_detects_browser_language():
-    english_script = read_text("docs/en/assets/language-redirect.js")
-    chinese_script = read_text("docs/zh/assets/language-redirect.js")
+    script = read_text("docs/assets/language-redirect.js")
 
-    assert chinese_script == english_script
-    assert 'var storageKey = "py-libterraform-docs-language"' in english_script
-    assert 'params.get("lang")' in english_script
-    assert (
-        "window.localStorage.setItem(storageKey, requestedLanguage)" in english_script
-    )
-    assert "navigator.languages" in english_script
-    assert "navigator.language" in english_script
-    assert "isEnglishRoot" in english_script
-    assert 'preferredLanguage === "en"' in english_script
-    assert 'language.indexOf("zh") === 0' in english_script
+    assert 'var storageKey = "py-libterraform-docs-language"' in script
+    assert 'params.get("lang")' in script
+    assert "window.localStorage.setItem(storageKey, requestedLanguage)" in script
+    assert "navigator.languages" in script
+    assert "navigator.language" in script
+    assert "isEnglishRoot" in script
+    assert 'preferredLanguage === "en"' in script
+    assert 'language.indexOf("zh") === 0' in script
     assert (
         'window.location.replace(new URL("zh/", window.location.href).toString())'
-        in english_script
+        in script
     )
-    assert "window.location.replace" not in english_script.split("isEnglishRoot")[0]
+    assert "window.location.replace" not in script.split("isEnglishRoot")[0]
 
 
 def test_readme_and_docs_remove_historical_memory_leak_notice():
@@ -451,6 +466,7 @@ def test_makefile_exposes_doc_build_and_serve_targets():
         "uv run $(UV_PYTHON_FLAG) --group docs zensical build --strict -f zensical.zh.toml"
         in makefile
     )
+    assert "cp -R docs/assets/. site/assets/" in makefile
     assert "python -m http.server" in makefile
     assert "doc-build: ## Build the documentation site" in makefile
     assert "doc-serve: ## Serve the documentation site locally" in makefile

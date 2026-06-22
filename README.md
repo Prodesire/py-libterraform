@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/py-libterraform-logo.png" alt="Python libterraform logo" width="180">
+</p>
+
 <h1 align="center">Python libterraform</h1>
 
 <p align="center">
