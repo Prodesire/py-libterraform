@@ -254,6 +254,20 @@ def test_chinese_docs_cover_public_python_interfaces():
     pool_page = read_text("docs/zh/api/terraform-pool.md")
     assert "::: libterraform.pool.TerraformPool" in pool_page
     assert "真正并行" in pool_page
+    # Each public TerraformPool interface needs a Chinese description, because
+    # the zh page hides the English docstrings.
+    assert "## 接口" in pool_page
+    for heading in [
+        "### `TerraformPool(",
+        "### `command(",
+        "### `submit(",
+        "### `run(",
+        "### `map(",
+        "### `shutdown(",
+        "### 上下文管理器",
+        "### `PoolCommand` 代理",
+    ]:
+        assert heading in pool_page
     assert "show_docstring_description: false" in command_page
     assert "show_docstring_parameters: false" in command_page
     assert "show_docstring_returns: false" in command_page
