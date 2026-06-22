@@ -13,7 +13,13 @@ _free = _lib_tf.Free
 _free.argtypes = [c_void_p]
 
 # Import after loading the shared library; these modules import _lib_tf above.
-from .cli import ApplyResult, CommandResult, PlanResult, TerraformCommand  # noqa: E402
+from .cli import (  # noqa: E402
+    ApplyResult,
+    CommandResult,
+    PlanResult,
+    TerraformCommand,
+    TerraformStream,
+)
 from .async_cli import AsyncTerraformCommand  # noqa: E402
 from .config import TerraformConfig  # noqa: E402
 from .models import ChangeSummary, OutputChange, ResourceChange  # noqa: E402
@@ -30,4 +36,5 @@ __all__ = [
     "TerraformCommand",
     "TerraformConfig",
     "TerraformPool",
+    "TerraformStream",
 ]

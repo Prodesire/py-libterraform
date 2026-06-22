@@ -2,9 +2,16 @@ import asyncio
 import uuid
 from concurrent.futures import Executor
 from functools import wraps
+from threading import Thread
 from typing import Any, Optional, Sequence, Tuple
 
-from libterraform.cli import TerraformCommand, _cancel_cli_run, _current_run_id
+from libterraform.cli import (
+    _STREAM_METHODS,
+    TerraformCommand,
+    TerraformStream,
+    _cancel_cli_run,
+    _current_run_id,
+)
 from libterraform.common import CmdType
 from libterraform.pool import TerraformPool
 
@@ -122,6 +129,84 @@ class AsyncTerraformCommand:
             executor=executor,
         )
 
+    def stream(
+        self,
+        cmd: CmdType,
+        args: Optional[Sequence[str]] = None,
+        options: Optional[dict] = None,
+        chdir=None,
+        json: bool = True,
+        check: bool = False,
+    ):
+        """Async iterator over a streaming command. See ``TerraformCommand.stream``.
+
+        Usage: ``async for event in async_cli.stream("plan"): ...``. Cancelling
+        the consuming task requests cooperative cancellation of the command.
+        """
+        return _aiter_stream(
+            self._sync_cli.stream(cmd, args, options, chdir, json, check)
+        )
+
+    def plan_stream(self, json: bool = True, check: bool = False, **options):
+        """Async iterator over ``terraform plan`` output."""
+        return _aiter_stream(
+            self._sync_cli.plan_stream(json=json, check=check, **options)
+        )
+
+    def apply_stream(
+        self,
+        json: bool = True,
+        check: bool = False,
+        auto_approve: bool = True,
+        input: bool = False,
+        **options,
+    ):
+        """Async iterator over ``terraform apply`` output."""
+        return _aiter_stream(
+            self._sync_cli.apply_stream(
+                json=json,
+                check=check,
+                auto_approve=auto_approve,
+                input=input,
+                **options,
+            )
+        )
+
+
+async def _aiter_stream(stream: TerraformStream):
+    """Bridge a synchronous TerraformStream to an async iterator.
+
+    A daemon thread drives the blocking stream and forwards each event to the
+    event loop through a queue. Cancelling the consumer requests cooperative
+    cancellation; the driver thread then reaches EOF and finishes on its own.
+    """
+    loop = asyncio.get_running_loop()
+    queue: asyncio.Queue = asyncio.Queue()
+    done = object()
+
+    def pump():
+        try:
+            for event in stream:
+                loop.call_soon_threadsafe(queue.put_nowait, (event, None))
+        except BaseException as exc:  # forward check/parse errors to the consumer
+            loop.call_soon_threadsafe(queue.put_nowait, (None, exc))
+        finally:
+            loop.call_soon_threadsafe(queue.put_nowait, done)
+
+    Thread(target=pump, daemon=True).start()
+    try:
+        while True:
+            item = await queue.get()
+            if item is done:
+                break
+            event, exc = item
+            if exc is not None:
+                raise exc
+            yield event
+    except (asyncio.CancelledError, GeneratorExit):
+        stream.cancel()
+        raise
+
 
 async def _await_pool_future(future):
     """Await a pool future, requesting cooperative cancellation on cancel."""
@@ -152,6 +237,8 @@ def _make_async_method(name):
 
 
 for _name, _value in vars(TerraformCommand).items():
-    if _name.startswith("_") or _name == "run" or not callable(_value):
+    if _name.startswith("_") or _name == "run" or _name in _STREAM_METHODS:
+        continue
+    if not callable(_value):
         continue
     setattr(AsyncTerraformCommand, _name, _make_async_method(_name))

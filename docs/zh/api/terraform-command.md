@@ -1351,3 +1351,62 @@ Terraform 会在当前配置和测试目录中搜索 `.tftest.hcl` 文件，然�
 | `lock` | `bool` | 设为 `False` 可在操作期间不持有 state lock。 | `None` |
 | `lock_timeout` | `str` | 获取 state lock 的重试等待时间。 | `None` |
 | `**options` | | 额外命令选项。 | |
+
+## 流式输出
+
+下面的方法返回 `TerraformStream` 的迭代器，在命令运行过程中
+实时产出输出（`json=True` 时产出解析后的事件，否则产出文本行），适合长耗时的
+`apply`。迭代结束后可读取 `retcode` 与 `stderr`。
+
+::: libterraform.cli.TerraformCommand.stream
+    options:
+      heading_level: 3
+      show_root_full_path: false
+      show_docstring_description: false
+      show_docstring_parameters: false
+      show_docstring_returns: false
+      show_docstring_raises: false
+      show_docstring_warns: false
+      show_docstring_examples: false
+
+运行命令并在其产出输出时流式返回。返回 `TerraformStream`；迭代它会在 `json=True`
+（默认）时产出解析后的 `-json` 事件，否则产出原始文本行。
+
+参数：
+
+| 参数 | 类型 | 说明 | 默认值 |
+|---|---|---|---|
+| `cmd` | `CmdType` | Terraform 子命令。 | *必填* |
+| `args` | `Optional[Sequence[str]]` | 追加到命令末尾的位置参数。 | `None` |
+| `options` | `Optional[dict]` | Terraform option 字典，转换规则同 `run`。 | `None` |
+| `chdir` | | 执行前切换到指定目录。 | `None` |
+| `json` | `bool` | 是否请求 `-json` 输出并逐行解析。 | `True` |
+| `check` | `bool` | 是否在结束时对非 `0`/`2` 返回码抛出异常。 | `False` |
+
+::: libterraform.cli.TerraformCommand.plan_stream
+    options:
+      heading_level: 3
+      show_root_full_path: false
+      show_docstring_description: false
+      show_docstring_parameters: false
+      show_docstring_returns: false
+      show_docstring_raises: false
+      show_docstring_warns: false
+      show_docstring_examples: false
+
+流式返回 `terraform plan` 的输出。`vars` 与 `var_files` 会映射为 `-var` / `-var-file`，
+其余关键字选项按 flag 转换。其他参数见 `stream`。
+
+::: libterraform.cli.TerraformCommand.apply_stream
+    options:
+      heading_level: 3
+      show_root_full_path: false
+      show_docstring_description: false
+      show_docstring_parameters: false
+      show_docstring_returns: false
+      show_docstring_raises: false
+      show_docstring_warns: false
+      show_docstring_examples: false
+
+流式返回 `terraform apply` 的输出。默认 `auto_approve=True`、`input=False` 以便无人值守
+运行。`vars` 与 `var_files` 会映射为 `-var` / `-var-file`。其他参数见 `stream`。

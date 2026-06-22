@@ -70,13 +70,23 @@ def test_pool_shutdown_rejects_new_work():
 
 
 def test_pool_command_proxy_exposes_public_sync_methods():
-    ignored = {"run"}
+    from libterraform.cli import _STREAM_METHODS
+
+    # Streaming methods cannot cross a process boundary, so the pool omits them.
+    ignored = {"run"} | _STREAM_METHODS
 
     for name, value in vars(TerraformCommand).items():
         if name.startswith("_") or name in ignored or not callable(value):
             continue
 
         assert hasattr(PoolCommand, name)
+
+
+def test_pool_command_proxy_omits_streaming_methods():
+    from libterraform.cli import _STREAM_METHODS
+
+    for name in _STREAM_METHODS:
+        assert not hasattr(PoolCommand, name)
 
 
 @pytest.mark.slow
@@ -126,9 +136,13 @@ def test_pool_cancel_running_command_interrupts_terraform(tmp_path):
 
 
 def test_pool_proxy_methods_are_not_coroutines():
+    from libterraform.cli import _STREAM_METHODS
+
     # The proxy returns futures synchronously; methods must not be coroutines.
     for name, value in vars(TerraformCommand).items():
-        if name.startswith("_") or name == "run" or not callable(value):
+        if name.startswith("_") or name == "run" or name in _STREAM_METHODS:
+            continue
+        if not callable(value):
             continue
 
         assert not inspect.iscoroutinefunction(getattr(PoolCommand, name))

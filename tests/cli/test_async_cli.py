@@ -242,7 +242,9 @@ async def test_async_pool_cancel_releases_worker(tmp_path):
 
 
 def test_async_command_exposes_public_sync_methods():
-    ignored = {"run"}
+    from libterraform.cli import _STREAM_METHODS
+
+    ignored = {"run"} | _STREAM_METHODS
 
     for name, value in vars(TerraformCommand).items():
         if name.startswith("_") or name in ignored or not callable(value):
@@ -250,3 +252,12 @@ def test_async_command_exposes_public_sync_methods():
 
         assert hasattr(AsyncTerraformCommand, name)
         assert inspect.iscoroutinefunction(getattr(AsyncTerraformCommand, name))
+
+
+def test_async_command_exposes_streaming_methods():
+    from libterraform.cli import _STREAM_METHODS
+
+    for name in _STREAM_METHODS:
+        method = getattr(AsyncTerraformCommand, name)
+        # Streaming methods return async iterators, not coroutines.
+        assert not inspect.iscoroutinefunction(method)

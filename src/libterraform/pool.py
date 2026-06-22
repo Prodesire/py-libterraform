@@ -39,7 +39,12 @@ from concurrent.futures import Future, ProcessPoolExecutor
 from functools import wraps
 from typing import Any, Dict, Iterator, Optional, Sequence
 
-from libterraform.cli import TerraformCommand, _cancel_cli_run, _current_run_id
+from libterraform.cli import (
+    _STREAM_METHODS,
+    TerraformCommand,
+    _cancel_cli_run,
+    _current_run_id,
+)
 from libterraform.common import CmdType
 
 __all__ = ["TerraformPool"]
@@ -164,7 +169,7 @@ class PoolCommand:
         self.cwd = cwd
 
     def __getattr__(self, name: str):
-        if name.startswith("_"):
+        if name.startswith("_") or name in _STREAM_METHODS:
             raise AttributeError(name)
 
         attr = getattr(TerraformCommand, name, None)
@@ -188,7 +193,9 @@ def _make_pool_method(name):
 
 
 for _name, _value in vars(TerraformCommand).items():
-    if _name.startswith("_") or _name == "run" or not callable(_value):
+    if _name.startswith("_") or _name == "run" or _name in _STREAM_METHODS:
+        continue
+    if not callable(_value):
         continue
     setattr(PoolCommand, _name, _make_pool_method(_name))
 
