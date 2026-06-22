@@ -129,7 +129,7 @@ class AsyncTerraformCommand:
             executor=executor,
         )
 
-    def stream(
+    async def stream(
         self,
         cmd: CmdType,
         args: Optional[Sequence[str]] = None,
@@ -143,17 +143,17 @@ class AsyncTerraformCommand:
         Usage: ``async for event in async_cli.stream("plan"): ...``. Cancelling
         the consuming task requests cooperative cancellation of the command.
         """
-        return _aiter_stream(
-            self._sync_cli.stream(cmd, args, options, chdir, json, check)
-        )
+        sync_stream = self._sync_cli.stream(cmd, args, options, chdir, json, check)
+        async for event in _aiter_stream(sync_stream):
+            yield event
 
-    def plan_stream(self, json: bool = True, check: bool = False, **options):
+    async def plan_stream(self, json: bool = True, check: bool = False, **options):
         """Async iterator over ``terraform plan`` output."""
-        return _aiter_stream(
-            self._sync_cli.plan_stream(json=json, check=check, **options)
-        )
+        sync_stream = self._sync_cli.plan_stream(json=json, check=check, **options)
+        async for event in _aiter_stream(sync_stream):
+            yield event
 
-    def apply_stream(
+    async def apply_stream(
         self,
         json: bool = True,
         check: bool = False,
@@ -162,15 +162,15 @@ class AsyncTerraformCommand:
         **options,
     ):
         """Async iterator over ``terraform apply`` output."""
-        return _aiter_stream(
-            self._sync_cli.apply_stream(
-                json=json,
-                check=check,
-                auto_approve=auto_approve,
-                input=input,
-                **options,
-            )
+        sync_stream = self._sync_cli.apply_stream(
+            json=json,
+            check=check,
+            auto_approve=auto_approve,
+            input=input,
+            **options,
         )
+        async for event in _aiter_stream(sync_stream):
+            yield event
 
 
 async def _aiter_stream(stream: TerraformStream):

@@ -259,5 +259,6 @@ def test_async_command_exposes_streaming_methods():
 
     for name in _STREAM_METHODS:
         method = getattr(AsyncTerraformCommand, name)
-        # Streaming methods return async iterators, not coroutines.
+        # Streaming methods are async generators (async for ...), not coroutines.
+        assert inspect.isasyncgenfunction(method)
         assert not inspect.iscoroutinefunction(method)
