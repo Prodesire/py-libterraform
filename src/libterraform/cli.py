@@ -1,4 +1,5 @@
 import os
+import uuid
 from contextvars import ContextVar
 from ctypes import POINTER, c_char_p, c_int, c_int64
 from threading import Thread
@@ -7,6 +8,16 @@ from typing import List, Optional, Sequence, Tuple, Union
 from libterraform import _lib_tf
 from libterraform.common import WINDOWS, CmdType, json_loads
 from libterraform.exceptions import TerraformCommandError, TerraformFdReadError
+from libterraform.models import (
+    ChangeSummary,
+    OutputChange,
+    ResourceChange,
+    parse_applied_changes,
+    parse_drift,
+    parse_output_changes,
+    parse_planned_changes,
+    parse_summary,
+)
 
 _run_cli = _lib_tf.RunCli
 _run_cli.argtypes = [c_int64, POINTER(c_char_p), c_int64, c_int64]
@@ -40,6 +51,90 @@ def flag(value):
     return ... if value else None
 
 
+def _build_argv(cmd, args=None, options=None, chdir=None, json=False):
+    """Build the Terraform argv list from a command, args and options.
+
+    Option keys are snake_case and converted to ``-dash-case``. Values convert
+    as: ``...`` -> value-less flag, ``bool`` -> lowercase, ``list`` -> repeated
+    flag, ``dict`` -> repeated ``-flag=key=value``. ``None`` values are skipped.
+    """
+    argv = []
+    if chdir:
+        argv.append(f"-chdir={chdir}")
+    if isinstance(cmd, (list, tuple)):
+        argv.extend(cmd)
+    else:
+        argv.append(cmd)
+    options = dict(options) if options else {}
+    if json:
+        options.update(json=flag(json))
+    for option, value in options.items():
+        if value is None:
+            continue
+        if "_" in option:
+            option = option.replace("_", "-")
+        if value is ...:
+            argv += [f"-{option}"]
+            continue
+        if isinstance(value, list):
+            argv += [f"-{option}={val}" for val in value]
+            continue
+        if isinstance(value, dict):
+            argv += [f"-{option}={k}={v}" for k, v in value.items()]
+            continue
+        if isinstance(value, bool):
+            value = "true" if value else "false"
+        argv += [f"-{option}={value}"]
+    if args:
+        argv.extend(args)
+    return argv
+
+
+def _invoke_cli(argv, w_stdout_fd, w_stderr_fd, run_id=None):
+    """Call into the shared library, writing stdout/stderr to the given fds.
+
+    Blocks until the command completes and returns its exit code. When ``run_id``
+    is set and the cancel-aware entry point is available, the run is registered
+    so `_cancel_cli_run` can interrupt it.
+    """
+    argc = len(argv)
+    c_argv = (c_char_p * argc)()
+    c_argv[:] = [arg.encode("utf-8") for arg in argv]
+    if WINDOWS:
+        import msvcrt
+
+        w_stdout = msvcrt.get_osfhandle(w_stdout_fd)
+        w_stderr = msvcrt.get_osfhandle(w_stderr_fd)
+    else:
+        w_stdout = w_stdout_fd
+        w_stderr = w_stderr_fd
+    if run_id and _run_cli_with_cancel is not None:
+        return _run_cli_with_cancel(
+            run_id.encode("utf-8"), argc, c_argv, w_stdout, w_stderr
+        )
+    return _run_cli(argc, c_argv, w_stdout, w_stderr)
+
+
+def _drain_fd(fd):
+    """Read a file descriptor to EOF and return its text."""
+    with os.fdopen(fd, encoding="utf-8") as f:
+        return f.read()
+
+
+def _merge_var_options(options, vars, var_files):
+    """Map the high-level ``vars``/``var_files`` kwargs to ``-var``/``-var-file``."""
+    if vars is not None:
+        options["var"] = vars
+    if var_files is not None:
+        options["var_file"] = var_files
+
+
+# Streaming methods return a TerraformStream (an iterator, not a value), so they
+# are handled specially by the async wrapper and excluded from the process pool
+# (a live stream cannot cross a process boundary).
+_STREAM_METHODS = frozenset({"stream", "plan_stream", "apply_stream"})
+
+
 class CommandResult:
     __slots__ = ("retcode", "value", "error", "json")
 
@@ -51,6 +146,183 @@ class CommandResult:
 
     def __repr__(self):
         return f"<CommandResult retcode={self.retcode!r} json={self.json!r}>"
+
+
+class PlanResult(CommandResult):
+    """Result of `plan()`.
+
+    Adds structured, lazily-parsed views over the ``-json`` output. The
+    structured properties are empty when ``json=False`` was used. ``value`` still
+    holds the raw parsed events, exactly like a plain `CommandResult`.
+    """
+
+    __slots__ = ()
+
+    @property
+    def changes(self) -> List[ResourceChange]:
+        """Resources the plan would change, as `ResourceChange` items."""
+        return parse_planned_changes(self.value)
+
+    @property
+    def drift(self) -> List[ResourceChange]:
+        """Resources that have drifted from the recorded state."""
+        return parse_drift(self.value)
+
+    @property
+    def summary(self) -> ChangeSummary:
+        """Add / change / remove / import counts for the plan."""
+        return parse_summary(self.value, operation="plan")
+
+    @property
+    def outputs(self) -> List[OutputChange]:
+        """Planned changes to root module outputs."""
+        return parse_output_changes(self.value)
+
+    def __repr__(self):
+        return f"<PlanResult retcode={self.retcode!r} json={self.json!r}>"
+
+
+class ApplyResult(CommandResult):
+    """Result of `apply()` and `destroy()`.
+
+    Adds structured, lazily-parsed views over the ``-json`` output. The
+    structured properties are empty when ``json=False`` was used.
+    """
+
+    __slots__ = ()
+
+    @property
+    def changes(self) -> List[ResourceChange]:
+        """Resources that were applied, as `ResourceChange` items."""
+        return parse_applied_changes(self.value)
+
+    @property
+    def summary(self) -> ChangeSummary:
+        """Add / change / remove / import counts for the apply."""
+        return parse_summary(self.value, operation="apply")
+
+    @property
+    def outputs(self) -> List[OutputChange]:
+        """Changes to root module outputs."""
+        return parse_output_changes(self.value)
+
+    def __repr__(self):
+        return f"<ApplyResult retcode={self.retcode!r} json={self.json!r}>"
+
+
+class TerraformStream:
+    """Streaming view over a running Terraform command.
+
+    Iterating yields output as the command produces it: parsed ``-json`` events
+    when ``json=True`` (the default), or raw text lines otherwise. The command
+    runs in a background thread, so the event loop / caller sees output live
+    instead of waiting for the command to finish.
+
+    After iteration completes, ``retcode`` and ``stderr`` are populated. If
+    ``check=True`` and the command failed, iteration raises
+    ``TerraformCommandError`` at the end. Use it as a context manager (or call
+    ``close()``) to stop a long-running command early; ``cancel()`` requests
+    cooperative cancellation explicitly.
+    """
+
+    def __init__(self, argv, json=True, check=False):
+        self._argv = argv
+        self._json = json
+        self._check = check
+        self._run_id = uuid.uuid4().hex
+        self.retcode: Optional[int] = None
+        self.stderr: Optional[str] = None
+        self._started = False
+        self._closed = False
+        self._f = None
+        self._stderr_result: list = []
+        self._cli_thread: Optional[Thread] = None
+        self._stderr_thread: Optional[Thread] = None
+
+    def __iter__(self) -> "TerraformStream":
+        return self
+
+    def __next__(self):
+        if not self._started:
+            self._start()
+        if self._closed:
+            raise StopIteration
+        assert self._f is not None
+        while True:
+            line = self._f.readline()
+            if not line:
+                self._finish()
+                raise StopIteration
+            line = line.rstrip("\n")
+            if self._json:
+                if not line:
+                    continue
+                return json_loads(line)
+            return line
+
+    def _start(self):
+        self._started = True
+        r_stdout_fd, w_stdout_fd = os.pipe()
+        r_stderr_fd, w_stderr_fd = os.pipe()
+        self._f = os.fdopen(r_stdout_fd, encoding="utf-8")
+        self._stderr_thread = Thread(
+            target=lambda: self._stderr_result.append(_drain_fd(r_stderr_fd)),
+            daemon=True,
+        )
+        self._stderr_thread.start()
+        self._cli_thread = Thread(
+            target=self._run, args=(w_stdout_fd, w_stderr_fd), daemon=True
+        )
+        self._cli_thread.start()
+
+    def _run(self, w_stdout_fd, w_stderr_fd):
+        self.retcode = _invoke_cli(self._argv, w_stdout_fd, w_stderr_fd, self._run_id)
+
+    def _join(self):
+        assert self._cli_thread is not None and self._stderr_thread is not None
+        self._cli_thread.join()
+        self._stderr_thread.join()
+        self.stderr = self._stderr_result[0] if self._stderr_result else ""
+        if self._f is not None:
+            try:
+                self._f.close()
+            except OSError:
+                pass
+
+    def _finish(self):
+        if self._closed:
+            return
+        self._closed = True
+        self._join()
+        if self._check and self.retcode not in (0, 2):
+            raise TerraformCommandError(self.retcode, self._argv, "", self.stderr)
+
+    def cancel(self):
+        """Request cooperative cancellation of the running command."""
+        _cancel_cli_run(self._run_id)
+
+    def close(self):
+        """Stop the command if still running and release resources."""
+        if not self._started or self._closed:
+            self._closed = True
+            return
+        self.cancel()
+        # Drain remaining output so the worker can exit, then join.
+        assert self._f is not None
+        try:
+            while self._f.readline():
+                pass
+        except (OSError, ValueError):
+            pass
+        self._closed = True
+        self._join()
+
+    def __enter__(self) -> "TerraformStream":
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
+        self.close()
+        return False
 
 
 class TerraformCommand:
@@ -99,41 +371,7 @@ class TerraformCommand:
         :param json: Whether to load stdout as json. Only partial commands support json param.
         :return: Command result tuple (retcode, stdout, stderr).
         """
-        argv = []
-        if chdir:
-            argv.append(f"-chdir={chdir}")
-        if isinstance(cmd, (list, tuple)):
-            argv.extend(cmd)
-        else:
-            argv.append(cmd)
-        if json:
-            options = options if options is not None else {}
-            options.update(json=flag(json))
-        if options is not None:
-            for option, value in options.items():
-                if value is None:
-                    continue
-                if "_" in option:
-                    option = option.replace("_", "-")
-                if value is ...:
-                    argv += [f"-{option}"]
-                    continue
-                if isinstance(value, list):
-                    for val in value:
-                        argv += [f"-{option}={val}"]
-                    continue
-                if isinstance(value, dict):
-                    for k, v in value.items():
-                        argv += [f"-{option}={k}={v}"]
-                    continue
-                if isinstance(value, bool):
-                    value = "true" if value else "false"
-                argv += [f"-{option}={value}"]
-        if args:
-            argv.extend(args)
-        argc = len(argv)
-        c_argv = (c_char_p * argc)()
-        c_argv[:] = [arg.encode("utf-8") for arg in argv]
+        argv = _build_argv(cmd, args, options, chdir, json)
         r_stdout_fd, w_stdout_fd = os.pipe()
         r_stderr_fd, w_stderr_fd = os.pipe()
 
@@ -146,33 +384,7 @@ class TerraformCommand:
         stderr_thread.daemon = True
         stderr_thread.start()
 
-        run_id = _current_run_id.get()
-        if WINDOWS:
-            import msvcrt
-
-            w_stdout_handle = msvcrt.get_osfhandle(w_stdout_fd)
-            w_stderr_handle = msvcrt.get_osfhandle(w_stderr_fd)
-            if run_id and _run_cli_with_cancel is not None:
-                retcode = _run_cli_with_cancel(
-                    run_id.encode("utf-8"),
-                    argc,
-                    c_argv,
-                    w_stdout_handle,
-                    w_stderr_handle,
-                )
-            else:
-                retcode = _run_cli(argc, c_argv, w_stdout_handle, w_stderr_handle)
-        else:
-            if run_id and _run_cli_with_cancel is not None:
-                retcode = _run_cli_with_cancel(
-                    run_id.encode("utf-8"),
-                    argc,
-                    c_argv,
-                    w_stdout_fd,
-                    w_stderr_fd,
-                )
-            else:
-                retcode = _run_cli(argc, c_argv, w_stdout_fd, w_stderr_fd)
+        retcode = _invoke_cli(argv, w_stdout_fd, w_stderr_fd, _current_run_id.get())
 
         stdout_thread.join()
         stderr_thread.join()
@@ -192,6 +404,72 @@ class TerraformCommand:
         with os.fdopen(std_fd, encoding="utf-8") as std_f:
             std = std_f.read()
             std_buffer.append(std)
+
+    def stream(
+        self,
+        cmd: CmdType,
+        args: Optional[Sequence[str]] = None,
+        options: Optional[dict] = None,
+        chdir=None,
+        json: bool = True,
+        check: bool = False,
+    ) -> TerraformStream:
+        """Run a command and stream its output as it is produced.
+
+        Returns a `TerraformStream`. Iterating it yields parsed ``-json``
+        events when ``json=True`` (the default) or raw text lines otherwise.
+
+        :param cmd: Terraform command.
+        :param args: Terraform command argument list.
+        :param options: Terraform command options (same conversion as
+            `run()`).
+        :param chdir: Switch to a different working directory first.
+        :param json: Whether to request ``-json`` output and parse each line.
+        :param check: Whether to raise on a non ``0``/``2`` exit code at the end.
+        """
+        argv = _build_argv(cmd, args, options, chdir, json)
+        return TerraformStream(argv, json=json, check=check)
+
+    def plan_stream(
+        self,
+        json: bool = True,
+        check: bool = False,
+        vars: Optional[dict] = None,
+        var_files: Optional[List[str]] = None,
+        **options,
+    ) -> TerraformStream:
+        """Stream ``terraform plan`` output. See `stream()`.
+
+        ``vars`` and ``var_files`` map to ``-var`` / ``-var-file`` like
+        `plan()`. Other keyword options are converted to CLI flags, e.g.
+        ``refresh=False`` or ``target="module.app"``.
+        """
+        _merge_var_options(options, vars, var_files)
+        return self.stream(
+            "plan", options=options, chdir=self.cwd, json=json, check=check
+        )
+
+    def apply_stream(
+        self,
+        json: bool = True,
+        check: bool = False,
+        auto_approve: bool = True,
+        input: bool = False,
+        vars: Optional[dict] = None,
+        var_files: Optional[List[str]] = None,
+        **options,
+    ) -> TerraformStream:
+        """Stream ``terraform apply`` output. See `stream()`.
+
+        Defaults to ``auto_approve=True`` and ``input=False`` for unattended use.
+        ``vars`` and ``var_files`` map to ``-var`` / ``-var-file`` like
+        `apply()`. Other keyword options are converted to CLI flags.
+        """
+        options.update(auto_approve=auto_approve, input=input)
+        _merge_var_options(options, vars, var_files)
+        return self.stream(
+            "apply", options=options, chdir=self.cwd, json=json, check=check
+        )
 
     def version(
         self, check: bool = False, json: bool = True, **options
@@ -409,7 +687,7 @@ class TerraformCommand:
         parallelism: int = None,
         state: str = None,
         **options,
-    ) -> CommandResult:
+    ) -> PlanResult:
         """Refer to https://developer.hashicorp.com/terraform/cli/commands/plan
 
         Generates a speculative execution plan, showing what actions Terraform
@@ -496,7 +774,7 @@ class TerraformCommand:
             "plan", options=options, chdir=self.cwd, check=check, json=json
         )
         value = json_loads(stdout, split=True) if json else stdout
-        return CommandResult(retcode, value, stderr, json=json)
+        return PlanResult(retcode, value, stderr, json=json)
 
     def query(
         self,
@@ -596,7 +874,7 @@ class TerraformCommand:
         vars: dict = None,
         var_files: List[str] = None,
         **options,
-    ) -> CommandResult:
+    ) -> ApplyResult:
         """Refer to https://developer.hashicorp.com/terraform/cli/commands/apply
 
         Creates or updates infrastructure according to Terraform configuration
@@ -665,7 +943,7 @@ class TerraformCommand:
             "apply", args, options=options, chdir=self.cwd, check=check, json=json
         )
         value = json_loads(stdout, split=True) if json else stdout
-        return CommandResult(retcode, value, stderr, json=json)
+        return ApplyResult(retcode, value, stderr, json=json)
 
     def destroy(
         self,
@@ -682,7 +960,7 @@ class TerraformCommand:
         state: str = None,
         state_out: str = None,
         **options,
-    ) -> CommandResult:
+    ) -> ApplyResult:
         """Refer to https://developer.hashicorp.com/terraform/cli/commands/destroy
 
         Destroy Terraform-managed infrastructure.
@@ -735,7 +1013,7 @@ class TerraformCommand:
             "destroy", options=options, chdir=self.cwd, check=check, json=json
         )
         value = json_loads(stdout, split=True) if json else stdout
-        return CommandResult(retcode, value, stderr, json=json)
+        return ApplyResult(retcode, value, stderr, json=json)
 
     def fmt(
         self,

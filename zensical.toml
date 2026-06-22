@@ -13,12 +13,16 @@ nav = [
   { "Getting Started" = [
     { "Installation" = "installation.md" },
     { "Quick Start" = "quickstart.md" },
+    { "Parallel Execution" = "parallel-execution.md" },
+    { "Plan Results and Streaming" = "structured-and-streaming.md" },
   ] },
   { "API Reference" = [
     { "Overview" = "api/index.md" },
     { "TerraformCommand" = "api/terraform-command.md" },
     { "AsyncTerraformCommand" = "api/async-terraform-command.md" },
+    { "TerraformPool" = "api/terraform-pool.md" },
     { "TerraformConfig" = "api/terraform-config.md" },
+    { "Results & Streaming" = "api/results.md" },
     { "Exceptions" = "api/exceptions.md" },
   ] },
   { "Development" = [
@@ -29,6 +33,8 @@ nav = [
 
 [project.theme]
 language = "en"
+logo = "assets/py-libterraform-logo.png"
+favicon = "assets/py-libterraform-favicon.png"
 features = [
   "navigation.sections",
   "navigation.indexes",

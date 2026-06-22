@@ -133,6 +133,24 @@ uv run pytest --color=yes
 uv build --wheel
 ```
 
+开始 Terraform 更新前，先检查上游漂移：
+
+```bash
+make inspect-upstream
+```
+
+该检查会读取当前 release matrix 条目，对比 Terraform 注册命令和 native bridge，
+报告 Python wrapper 与文档缺口，并可读取 Terraform releases index 来识别 patch
+更新和下一个 minor prerelease。
+
+wheel 构建使用与 Python ABI 无关的平台 tag，例如
+`py3-none-macosx_14_0_arm64` 和 `py3-none-manylinux_2_35_x86_64`，因为本包通过
+`ctypes` 加载内置 Terraform 共享库，而不是 CPython extension module。发布构建期间，
+Linux wheel tag 也会由 `scripts/normalize_wheel_tags.py` 作为防护统一规范化。
+release workflow 通过 `uv publish --trusted-publishing automatic` 使用 PyPI
+Trusted Publishing 发布，因此需要在 PyPI 上把 `pypi` environment 配置为 trusted
+publisher，而不是依赖长期有效的 `PYPI_TOKEN` secret。
+
 ## 故障排查
 
 如果导入 `libterraform` 时提示共享库缺失，先构建 wheel，或安装包含

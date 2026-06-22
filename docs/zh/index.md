@@ -1,5 +1,9 @@
 # Python libterraform
 
+<p align="center">
+  <img src="../assets/py-libterraform-logo.png" alt="Python libterraform logo" width="180" />
+</p>
+
 `libterraform` 是 Terraform 的 Python 绑定。它把 Terraform 打包为共享库，
 并提供 Python API 来执行 Terraform CLI 命令、解析 Terraform 配置目录。
 
@@ -25,14 +29,14 @@
 
 | libterraform | Terraform |
 |---|---|
-| [0.15.0](https://pypi.org/project/libterraform/0.15.0/) | [1.15.5](https://github.com/hashicorp/terraform/tree/v1.15.5) |
+| [0.15.1](https://pypi.org/project/libterraform/0.15.1/) | [1.15.5](https://github.com/hashicorp/terraform/tree/v1.15.5) |
 | [0.14.0](https://pypi.org/project/libterraform/0.14.0/) | [1.14.9](https://github.com/hashicorp/terraform/tree/v1.14.9) |
 | [0.13.0](https://pypi.org/project/libterraform/0.13.0/) | [1.13.5](https://github.com/hashicorp/terraform/tree/v1.13.5) |
 | [0.12.0](https://pypi.org/project/libterraform/0.12.0/) | [1.12.2](https://github.com/hashicorp/terraform/tree/v1.12.2) |
 | [0.11.0](https://pypi.org/project/libterraform/0.11.0/) | [1.11.4](https://github.com/hashicorp/terraform/tree/v1.11.4) |
 | [0.10.0](https://pypi.org/project/libterraform/0.10.0/) | [1.10.5](https://github.com/hashicorp/terraform/tree/v1.10.5) |
 | [0.9.0](https://pypi.org/project/libterraform/0.9.0/) | [1.9.8](https://github.com/hashicorp/terraform/tree/v1.9.8) |
-| [0.8.0](https://pypi.org/project/libterraform/0.8.0/) | [1.8.4](https://github.com/hashicorp/terraform/tree/v1.8.4) |
+| [0.8.2](https://pypi.org/project/libterraform/0.8.2/) | [1.8.4](https://github.com/hashicorp/terraform/tree/v1.8.4) |
 | [0.7.0](https://pypi.org/project/libterraform/0.7.0/) | [1.6.6](https://github.com/hashicorp/terraform/tree/v1.6.6) |
 | [0.6.0](https://pypi.org/project/libterraform/0.6.0/) | [1.5.7](https://github.com/hashicorp/terraform/tree/v1.5.7) |
 | [0.5.0](https://pypi.org/project/libterraform/0.5.0/) | [1.3.0](https://github.com/hashicorp/terraform/tree/v1.3.0) |

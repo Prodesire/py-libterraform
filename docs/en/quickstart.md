@@ -1,26 +1,59 @@
 # Quick Start
 
-## Run Terraform Commands
+## Prepare a module
 
-Create a `TerraformCommand` for a Terraform module directory:
+The examples on this page run against a real Terraform module directory. If you
+already have one, point at it directly. Otherwise, this snippet creates a minimal
+module that runs anywhere — it uses Terraform's built-in `terraform_data`
+resource, so it needs no cloud credentials and downloads no providers:
+
+```python
+import os
+import tempfile
+
+module_dir = tempfile.mkdtemp()
+with open(os.path.join(module_dir, "main.tf"), "w") as f:
+    f.write(
+        '''
+        variable "environment" {
+          type    = string
+          default = "dev"
+        }
+
+        resource "terraform_data" "example" {
+          input = var.environment
+        }
+
+        output "environment" {
+          value = terraform_data.example.output
+        }
+        '''
+    )
+```
+
+Every example below uses `module_dir` as the working directory.
+
+## Run Terraform commands
+
+Create a `TerraformCommand` for the module directory, then initialize and
+validate it:
 
 ```python
 from libterraform import TerraformCommand
 
-cli = TerraformCommand("path/to/terraform/module")
-```
+cli = TerraformCommand(module_dir)
 
-Initialize the module and validate it:
-
-```python
 cli.init(check=True)
 validation = cli.validate(check=True)
 
-print(validation.retcode)
-print(validation.value)
+print(validation.value["valid"])  # True
 ```
 
-Generate a plan:
+`check=True` raises `TerraformCommandError` when Terraform reports failure, so
+errors surface immediately instead of hiding in a return code.
+
+Generate a plan. Methods that support JSON output return parsed Python values, so
+`plan.value` is a list of Terraform's log events:
 
 ```python
 plan = cli.plan(check=True)
@@ -29,58 +62,72 @@ for event in plan.value:
     print(event.get("@level"), event.get("@message"))
 ```
 
-By default, methods that support JSON output parse stdout into Python values.
-Pass `json=False` to keep Terraform's text output:
+Apply the plan. `auto_approve` skips the interactive prompt and `input=False`
+disables interactive input, which is what most automation wants:
+
+```python
+apply = cli.apply(auto_approve=True, input=False, check=True)
+print(apply.retcode)  # 0
+```
+
+Pass `json=False` to keep Terraform's plain text output instead of parsed JSON:
 
 ```python
 version = cli.version(json=False)
 print(version.value)
 ```
 
-## Pass Terraform Options
+## Pass Terraform options
 
-Python keyword arguments are converted into Terraform CLI flags:
+Python keyword arguments become Terraform CLI flags. Underscores become hyphens,
+so `detailed_exitcode` maps to `-detailed-exitcode`:
 
 ```python
 plan = cli.plan(
     detailed_exitcode=True,
-    vars={"environment": "dev"},
-    target=["module.network", "module.app"],
+    vars={"environment": "prod"},
 )
 ```
 
-`TerraformCommand` converts underscores to hyphens, so `detailed_exitcode` maps to
-`-detailed-exitcode`.
+The conversion rules cover the common flag shapes:
 
-## Parse Terraform Configuration
+- `True` / `False` become Terraform's lowercase booleans, e.g. `lock=False` is `-lock=false`.
+- A dict expands to repeated `key=value` flags, e.g. `vars={"a": "1", "b": "2"}` is `-var=a=1 -var=b=2`.
+- A list expands to a repeated flag, e.g. `var_files=["a.tfvars", "b.tfvars"]`.
 
-Use `TerraformConfig` when you need Terraform's parsed representation of a
-configuration directory:
+## Parse Terraform configuration
+
+`TerraformConfig` returns Terraform's own parsed view of a configuration
+directory, without running a command:
 
 ```python
 from libterraform import TerraformConfig
 
-module, diagnostics = TerraformConfig.load_config_dir("path/to/terraform/module")
+module, diagnostics = TerraformConfig.load_config_dir(module_dir)
 
-print(module["ManagedResources"].keys())
+print(list(module["ManagedResources"]))  # ['terraform_data.example']
 print(diagnostics)
 ```
 
-## Use Asyncio
+## Use asyncio
 
-Use `AsyncTerraformCommand` when an asyncio application needs to await
-Terraform operations without blocking the event loop:
+`AsyncTerraformCommand` lets an asyncio application await Terraform operations
+without blocking the event loop:
 
 ```python
 from libterraform import AsyncTerraformCommand
 
-cli = AsyncTerraformCommand("path/to/terraform/module")
+cli = AsyncTerraformCommand(module_dir)
 validation = await cli.validate(check=True)
 ```
 
-Terraform CLI execution is still serialized inside the shared library. Use
-separate processes for true parallel Terraform operations.
-Cancelling the coroutine requests Terraform's cooperative shutdown path; it
-does not terminate the worker thread directly.
+By default the call runs in a worker thread, so Terraform CLI execution is still
+serialized inside the shared library. Cancelling the coroutine requests
+Terraform's cooperative shutdown path; it does not terminate the worker thread
+directly.
 
-See the [API Reference](api/index.md) for generated interface documentation.
+To actually run Terraform commands at the same time — across modules, with sync
+or async APIs — see [Parallel Execution](parallel-execution.md), which covers
+`TerraformPool` and running `AsyncTerraformCommand` on a process pool.
+
+See the [API Reference](api/index.md) for the generated interface documentation.

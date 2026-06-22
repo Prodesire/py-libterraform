@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/py-libterraform-logo.png" alt="Python libterraform logo" width="180">
+</p>
+
 <h1 align="center">Python libterraform</h1>
 
 <p align="center">
@@ -25,7 +29,7 @@ pip install libterraform
 
 > **线程说明：** `TerraformCommand` 可以被多个 Python 线程调用，但由于
 > Terraform CLI 使用进程级全局状态，共享库内部会串行执行 Terraform 命令。如需
-> 真正并行的 Terraform 操作，请使用多个进程隔离。
+> 真正并行的 Terraform 操作，请使用 `TerraformPool`（或多个进程隔离）。
 
 ## 使用
 
@@ -50,6 +54,21 @@ from libterraform import AsyncTerraformCommand
 cli = AsyncTerraformCommand("path/to/module")
 await cli.validate(check=True)
 ```
+
+使用 `TerraformPool` 可以在多个 worker 进程间并行执行 Terraform 命令：
+
+```python
+from libterraform import TerraformPool
+
+with TerraformPool(max_workers=4) as pool:
+    for result in pool.map("validate", ["modules/a", "modules/b"], check=True):
+        print(result.value["valid"])
+```
+
+pool 会启动 worker 进程，因此上述代码必须运行在 `if __name__ == "__main__":`
+保护之下。[快速开始](https://prodesire.github.io/py-libterraform/zh/quickstart/)
+可在几秒内创建一个可运行的模块，[并行执行](https://prodesire.github.io/py-libterraform/zh/parallel-execution/)
+提供了完整的 pool 示例。
 
 ## 贡献
 

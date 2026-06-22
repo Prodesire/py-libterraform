@@ -947,8 +947,8 @@ state 文件创建备份。
 
 参考 <https://developer.hashicorp.com/terraform/cli/commands/state/push>
 
-从指定路径的本地 state 文件更新远端 state。此命令会保护你免于写入更旧的
-serial 或不同的 state 文件世系，除非指定了 `force`。
+从指定路径的本地 state 文件更新远端 state。除非指定了 `force`，此命令会避免写入
+更旧的 serial 或不同世系的 state 文件。
 
 此命令也可用于本地 state（会覆盖本地 state），但此用例下用处较小。
 
@@ -1107,7 +1107,7 @@ subcommands 由 Stacks plugin 实现决定，可传入 `args=["-help"]` 查看�
 参考 <https://developer.hashicorp.com/terraform/cli/commands/taint>
 
 Terraform 使用 "tainted" 来描述可能不完全正常运行的资源实例——要么因为
-其创建部分失败，要么因为你使用此命令手动将其标记为 tainted。
+其创建部分失败，要么因为通过此命令被手动标记为 tainted。
 
 此命令不会直接修改基础设施，但后续的 Terraform plan 将包含销毁远端对象并
 创建新对象来替换它的操作。
@@ -1351,3 +1351,62 @@ Terraform 会在当前配置和测试目录中搜索 `.tftest.hcl` 文件，然�
 | `lock` | `bool` | 设为 `False` 可在操作期间不持有 state lock。 | `None` |
 | `lock_timeout` | `str` | 获取 state lock 的重试等待时间。 | `None` |
 | `**options` | | 额外命令选项。 | |
+
+## 流式输出
+
+下面的方法返回 `TerraformStream` 的迭代器，在命令运行过程中
+实时产出输出（`json=True` 时产出解析后的事件，否则产出文本行），适合长耗时的
+`apply`。迭代结束后可读取 `retcode` 与 `stderr`。
+
+::: libterraform.cli.TerraformCommand.stream
+    options:
+      heading_level: 3
+      show_root_full_path: false
+      show_docstring_description: false
+      show_docstring_parameters: false
+      show_docstring_returns: false
+      show_docstring_raises: false
+      show_docstring_warns: false
+      show_docstring_examples: false
+
+运行命令并在其产出输出时流式返回。返回 `TerraformStream`；迭代它会在 `json=True`
+（默认）时产出解析后的 `-json` 事件，否则产出原始文本行。
+
+参数：
+
+| 参数 | 类型 | 说明 | 默认值 |
+|---|---|---|---|
+| `cmd` | `CmdType` | Terraform 子命令。 | *必填* |
+| `args` | `Optional[Sequence[str]]` | 追加到命令末尾的位置参数。 | `None` |
+| `options` | `Optional[dict]` | Terraform option 字典，转换规则同 `run`。 | `None` |
+| `chdir` | | 执行前切换到指定目录。 | `None` |
+| `json` | `bool` | 是否请求 `-json` 输出并逐行解析。 | `True` |
+| `check` | `bool` | 是否在结束时对非 `0`/`2` 返回码抛出异常。 | `False` |
+
+::: libterraform.cli.TerraformCommand.plan_stream
+    options:
+      heading_level: 3
+      show_root_full_path: false
+      show_docstring_description: false
+      show_docstring_parameters: false
+      show_docstring_returns: false
+      show_docstring_raises: false
+      show_docstring_warns: false
+      show_docstring_examples: false
+
+流式返回 `terraform plan` 的输出。`vars` 与 `var_files` 会映射为 `-var` / `-var-file`，
+其余关键字选项按 flag 转换。其他参数见 `stream`。
+
+::: libterraform.cli.TerraformCommand.apply_stream
+    options:
+      heading_level: 3
+      show_root_full_path: false
+      show_docstring_description: false
+      show_docstring_parameters: false
+      show_docstring_returns: false
+      show_docstring_raises: false
+      show_docstring_warns: false
+      show_docstring_examples: false
+
+流式返回 `terraform apply` 的输出。默认 `auto_approve=True`、`input=False` 以便无人值守
+运行。`vars` 与 `var_files` 会映射为 `-var` / `-var-file`。其他参数见 `stream`。

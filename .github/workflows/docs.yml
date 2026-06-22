@@ -38,6 +38,8 @@ jobs:
           rm -rf site
           uv run --group docs zensical build --strict -f zensical.toml
           uv run --group docs zensical build --strict -f zensical.zh.toml
+          mkdir -p site/assets
+          cp -R docs/assets/. site/assets/
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v6
         with:

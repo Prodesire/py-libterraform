@@ -7,18 +7,22 @@ repo_name = "Prodesire/py-libterraform"
 edit_uri = "edit/main/docs/zh/"
 docs_dir = "docs/zh"
 site_dir = "site/zh"
-extra_javascript = ["assets/language-redirect.js"]
+extra_javascript = ["../assets/language-redirect.js"]
 nav = [
   { "首页" = "index.md" },
   { "入门" = [
     { "安装" = "installation.md" },
     { "快速开始" = "quickstart.md" },
+    { "并行执行" = "parallel-execution.md" },
+    { "Plan 结果与流式输出" = "structured-and-streaming.md" },
   ] },
   { "API 参考" = [
     { "概览" = "api/index.md" },
     { "TerraformCommand" = "api/terraform-command.md" },
     { "AsyncTerraformCommand" = "api/async-terraform-command.md" },
+    { "TerraformPool" = "api/terraform-pool.md" },
     { "TerraformConfig" = "api/terraform-config.md" },
+    { "结果与流式" = "api/results.md" },
     { "异常" = "api/exceptions.md" },
   ] },
   { "开发" = [
@@ -29,6 +33,8 @@ nav = [
 
 [project.theme]
 language = "zh"
+logo = "../assets/py-libterraform-logo.png"
+favicon = "../assets/py-libterraform-favicon.png"
 features = [
   "navigation.sections",
   "navigation.indexes",

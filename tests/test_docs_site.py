@@ -1,4 +1,5 @@
 import ast
+import json
 from pathlib import Path
 from typing import Any
 
@@ -6,6 +7,9 @@ import tomli
 
 
 ROOT = Path(__file__).resolve().parents[1]
+THEME_LOGO = "assets/py-libterraform-logo.png"
+THEME_FAVICON = "assets/py-libterraform-favicon.png"
+LANGUAGE_REDIRECT = "assets/language-redirect.js"
 
 
 def read_text(path: str) -> str:
@@ -19,6 +23,10 @@ def markdown_corpus() -> str:
         *sorted((ROOT / "docs").glob("**/*.md")),
     ]
     return "\n".join(path.read_text(encoding="utf-8") for path in paths)
+
+
+def release_matrix() -> dict[str, Any]:
+    return json.loads(read_text("release-matrix.json"))
 
 
 def nav_titles(items: list[dict[str, Any]]) -> list[str]:
@@ -43,6 +51,22 @@ def public_methods(path: str, class_name: str) -> list[str]:
     raise AssertionError(f"{class_name} not found in {path}")
 
 
+def assert_theme_assets(project: dict[str, Any]) -> None:
+    asset_prefix = "../" if project["docs_dir"] == "docs/zh" else ""
+
+    assert project["extra_javascript"] == [f"{asset_prefix}{LANGUAGE_REDIRECT}"]
+    assert project["theme"]["logo"] == f"{asset_prefix}{THEME_LOGO}"
+    assert project["theme"]["favicon"] == f"{asset_prefix}{THEME_FAVICON}"
+
+
+def test_docs_shared_assets_are_stored_once():
+    assert (ROOT / "docs" / THEME_LOGO).is_file()
+    assert (ROOT / "docs" / THEME_FAVICON).is_file()
+    assert (ROOT / "docs" / LANGUAGE_REDIRECT).is_file()
+    assert not (ROOT / "docs/en/assets").exists()
+    assert not (ROOT / "docs/zh/assets").exists()
+
+
 def test_zensical_config_generates_api_docs_for_project_pages_url():
     assert not (ROOT / "mkdocs.yml").exists()
 
@@ -55,13 +79,25 @@ def test_zensical_config_generates_api_docs_for_project_pages_url():
     assert project["docs_dir"] == "docs/en"
     assert project["site_dir"] == "site"
     assert project["edit_uri"] == "edit/main/docs/en/"
-    assert project["extra_javascript"] == ["assets/language-redirect.js"]
+    assert_theme_assets(project)
     assert {"TerraformCommand": "api/terraform-command.md"} in project["nav"][2][
         "API Reference"
     ]
     assert {"AsyncTerraformCommand": "api/async-terraform-command.md"} in project[
         "nav"
     ][2]["API Reference"]
+    assert {"TerraformPool": "api/terraform-pool.md"} in project["nav"][2][
+        "API Reference"
+    ]
+    assert {"Results & Streaming": "api/results.md"} in project["nav"][2][
+        "API Reference"
+    ]
+    assert {"Parallel Execution": "parallel-execution.md"} in project["nav"][1][
+        "Getting Started"
+    ]
+    assert {"Plan Results and Streaming": "structured-and-streaming.md"} in project[
+        "nav"
+    ][1]["Getting Started"]
 
     python_handler = project["plugins"]["mkdocstrings"]["handlers"]["python"]
     assert python_handler["paths"] == ["src"]
@@ -91,15 +127,22 @@ def test_chinese_zensical_config_uses_separate_language_site():
     assert project["docs_dir"] == "docs/zh"
     assert project["site_dir"] == "site/zh"
     assert project["edit_uri"] == "edit/main/docs/zh/"
-    assert project["extra_javascript"] == ["assets/language-redirect.js"]
     assert project["theme"]["language"] == "zh"
+    assert_theme_assets(project)
     assert "首页" in titles
     assert "安装" in titles
     assert "快速开始" in titles
+    assert "并行执行" in titles
     assert "API 参考" in titles
     assert "发布策略" in titles
     assert "Home" not in titles
     assert "Getting Started" not in titles
+    assert {"并行执行": "parallel-execution.md"} in project["nav"][1]["入门"]
+    assert {"Plan 结果与流式输出": "structured-and-streaming.md"} in project["nav"][1][
+        "入门"
+    ]
+    assert {"TerraformPool": "api/terraform-pool.md"} in project["nav"][2]["API 参考"]
+    assert {"结果与流式": "api/results.md"} in project["nav"][2]["API 参考"]
     assert project["extra"]["alternate"] == [
         {
             "name": "English",
@@ -115,7 +158,7 @@ def test_chinese_zensical_config_uses_separate_language_site():
 
 
 def test_docs_language_redirect_script_rewrites_local_alternate_links():
-    script = read_text("docs/en/assets/language-redirect.js")
+    script = read_text("docs/assets/language-redirect.js")
 
     assert 'var productionOrigin = "https://prodesire.github.io"' in script
     assert 'var productionBasePath = "/py-libterraform"' in script
@@ -138,25 +181,21 @@ def test_docs_language_redirect_script_rewrites_local_alternate_links():
 
 
 def test_docs_language_redirect_script_detects_browser_language():
-    english_script = read_text("docs/en/assets/language-redirect.js")
-    chinese_script = read_text("docs/zh/assets/language-redirect.js")
+    script = read_text("docs/assets/language-redirect.js")
 
-    assert chinese_script == english_script
-    assert 'var storageKey = "py-libterraform-docs-language"' in english_script
-    assert 'params.get("lang")' in english_script
-    assert (
-        "window.localStorage.setItem(storageKey, requestedLanguage)" in english_script
-    )
-    assert "navigator.languages" in english_script
-    assert "navigator.language" in english_script
-    assert "isEnglishRoot" in english_script
-    assert 'preferredLanguage === "en"' in english_script
-    assert 'language.indexOf("zh") === 0' in english_script
+    assert 'var storageKey = "py-libterraform-docs-language"' in script
+    assert 'params.get("lang")' in script
+    assert "window.localStorage.setItem(storageKey, requestedLanguage)" in script
+    assert "navigator.languages" in script
+    assert "navigator.language" in script
+    assert "isEnglishRoot" in script
+    assert 'preferredLanguage === "en"' in script
+    assert 'language.indexOf("zh") === 0' in script
     assert (
         'window.location.replace(new URL("zh/", window.location.href).toString())'
-        in english_script
+        in script
     )
-    assert "window.location.replace" not in english_script.split("isEnglishRoot")[0]
+    assert "window.location.replace" not in script.split("isEnglishRoot")[0]
 
 
 def test_readme_and_docs_remove_historical_memory_leak_notice():
@@ -198,11 +237,31 @@ def test_docs_include_0_15_version_mapping():
     chinese_policy = read_text("docs/zh/release-policy.md")
 
     for page in [english_index, chinese_index]:
-        assert "libterraform/0.15.0/" in page
+        assert "libterraform/0.15.1/" in page
         assert "terraform/tree/v1.15.5" in page
 
     assert "`0.15.x` | `1.15.x` | `release/0.15`" in english_policy
     assert "`0.15.x` | `1.15.x` | `release/0.15`" in chinese_policy
+
+
+def test_docs_version_tables_include_release_matrix_entries():
+    pages = [
+        read_text("docs/en/index.md"),
+        read_text("docs/zh/index.md"),
+    ]
+
+    for entry in release_matrix()["releases"]:
+        libterraform_version = entry["libterraform_version"]
+        terraform_version = entry["terraform_version"]
+        expected = (
+            f"| [{libterraform_version}]"
+            f"(https://pypi.org/project/libterraform/{libterraform_version}/) | "
+            f"[{terraform_version}]"
+            f"(https://github.com/hashicorp/terraform/tree/v{terraform_version}) |"
+        )
+
+        for page in pages:
+            assert expected in page
 
 
 def test_chinese_docs_cover_public_python_interfaces():
@@ -217,6 +276,20 @@ def test_chinese_docs_cover_public_python_interfaces():
     assert "::: libterraform.async_cli.AsyncTerraformCommand" in async_command_page
     assert "asyncio 兼容" in async_command_page
     assert "协作式取消" in async_command_page
+    pool_page = read_text("docs/zh/api/terraform-pool.md")
+    assert "真正并行" in pool_page
+    # Each public TerraformPool interface is rendered with mkdocstrings and given
+    # a Chinese description right after it, because the zh page hides the English
+    # docstrings. Mirror the structure of the English page exactly.
+    for directive in [
+        "::: libterraform.pool.TerraformPool\n",
+        "::: libterraform.pool.TerraformPool.command\n",
+        "::: libterraform.pool.TerraformPool.submit\n",
+        "::: libterraform.pool.TerraformPool.run\n",
+        "::: libterraform.pool.TerraformPool.map\n",
+        "::: libterraform.pool.TerraformPool.shutdown\n",
+    ]:
+        assert directive in pool_page
     assert "show_docstring_description: false" in command_page
     assert "show_docstring_parameters: false" in command_page
     assert "show_docstring_returns: false" in command_page
@@ -302,6 +375,9 @@ def test_chinese_development_docs_include_release_policy_and_full_sections():
         "[发布策略](release-policy.md)",
         "release-matrix.json",
         "python scripts/verify_release_matrix.py",
+        "make inspect-upstream",
+        "Trusted Publishing",
+        "py3-none-manylinux_2_35_x86_64",
     ]:
         assert phrase in development_page
 
@@ -332,12 +408,87 @@ def test_api_reference_pages_generate_public_python_interfaces():
     config_page = read_text("docs/en/api/terraform-config.md")
     exceptions_page = read_text("docs/en/api/exceptions.md")
 
+    pool_page = read_text("docs/en/api/terraform-pool.md")
+
     assert "::: libterraform.cli.TerraformCommand" in command_page
     assert "::: libterraform.async_cli.AsyncTerraformCommand" in async_command_page
     assert "asyncio-compatible" in async_command_page
     assert "cooperative cancellation" in async_command_page
+    assert "true parallel Terraform operations" in pool_page
     assert "load_config_dir" in config_page
     assert "TerraformCommandError" in exceptions_page
+
+    # The English and Chinese TerraformPool pages must render the same set of
+    # interfaces in the same way, so their structure stays consistent.
+    zh_pool_page = read_text("docs/zh/api/terraform-pool.md")
+    for directive in [
+        "::: libterraform.pool.TerraformPool\n",
+        "::: libterraform.pool.TerraformPool.command\n",
+        "::: libterraform.pool.TerraformPool.submit\n",
+        "::: libterraform.pool.TerraformPool.run\n",
+        "::: libterraform.pool.TerraformPool.map\n",
+        "::: libterraform.pool.TerraformPool.shutdown\n",
+    ]:
+        assert directive in pool_page
+        assert directive in zh_pool_page
+
+
+def test_async_pages_document_the_same_methods_in_both_languages():
+    english_page = read_text("docs/en/api/async-terraform-command.md")
+    chinese_page = read_text("docs/zh/api/async-terraform-command.md")
+
+    for directive in [
+        "::: libterraform.async_cli.AsyncTerraformCommand.run\n",
+        "::: libterraform.async_cli.AsyncTerraformCommand.stream\n",
+        "::: libterraform.async_cli.AsyncTerraformCommand.plan_stream\n",
+        "::: libterraform.async_cli.AsyncTerraformCommand.apply_stream\n",
+    ]:
+        assert directive in english_page
+        assert directive in chinese_page
+
+
+def test_results_pages_document_the_same_types_in_both_languages():
+    english_page = read_text("docs/en/api/results.md")
+    chinese_page = read_text("docs/zh/api/results.md")
+
+    for directive in [
+        "::: libterraform.cli.PlanResult\n",
+        "::: libterraform.cli.ApplyResult\n",
+        "::: libterraform.models.ResourceChange\n",
+        "::: libterraform.models.ChangeSummary\n",
+        "::: libterraform.models.OutputChange\n",
+        "::: libterraform.cli.TerraformStream\n",
+    ]:
+        assert directive in english_page
+        assert directive in chinese_page
+
+
+def test_structured_and_streaming_guide_is_bilingual():
+    english_page = read_text("docs/en/structured-and-streaming.md")
+    chinese_page = read_text("docs/zh/structured-and-streaming.md")
+
+    for page in [english_page, chinese_page]:
+        assert "PlanResult" in page
+        assert "ApplyResult" in page
+        assert "TerraformStream" in page
+        assert "plan_stream" in page
+        assert "apply_stream" in page
+        assert "async for" in page
+
+
+def test_parallel_execution_docs_explain_process_isolation():
+    english_page = read_text("docs/en/parallel-execution.md")
+    chinese_page = read_text("docs/zh/parallel-execution.md")
+
+    for page in [english_page, chinese_page]:
+        assert "ProcessPoolExecutor" in page
+        assert "TerraformCommand" in page
+        assert "AsyncTerraformCommand" in page
+
+    assert "true parallel Terraform operations" in english_page
+    assert "one Python process" in english_page
+    assert "真正并行" in chinese_page
+    assert "单个 Python 进程" in chinese_page
 
 
 def test_docs_workflow_builds_and_deploys_github_pages():
@@ -345,6 +496,9 @@ def test_docs_workflow_builds_and_deploys_github_pages():
 
     assert "uv run --group docs zensical build --strict -f zensical.toml" in workflow
     assert "uv run --group docs zensical build --strict -f zensical.zh.toml" in workflow
+    # The shared assets (logo, favicon, language switcher) live outside docs_dir,
+    # so the deploy must copy them into the built site like `make doc-build` does.
+    assert "cp -R docs/assets/. site/assets/" in workflow
     assert "mkdocs" not in workflow
     assert "actions/configure-pages@v6" in workflow
     assert "actions/upload-pages-artifact@v5" in workflow
@@ -368,6 +522,9 @@ def test_makefile_exposes_doc_build_and_serve_targets():
         "uv run $(UV_PYTHON_FLAG) --group docs zensical build --strict -f zensical.zh.toml"
         in makefile
     )
+    assert "cp -R docs/assets/. site/assets/" in makefile
     assert "python -m http.server" in makefile
     assert "doc-build: ## Build the documentation site" in makefile
     assert "doc-serve: ## Serve the documentation site locally" in makefile
+    assert "inspect-upstream: ## Inspect Terraform release and bridge drift" in makefile
+    assert "scripts/inspect_upstream.py --releases-url" in makefile

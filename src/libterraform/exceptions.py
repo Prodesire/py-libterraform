@@ -16,6 +16,11 @@ class TerraformCommandError(LibTerraformError):
         self.stdout = stdout
         self.stderr = stderr
 
+    def __reduce__(self):
+        # Keep the error picklable so it can propagate across process boundaries
+        # (e.g. when raised inside a TerraformPool worker process).
+        return (self.__class__, (self.retcode, self.cmd, self.stdout, self.stderr))
+
     def __str__(self):
         return f"Command {self.cmd!r} returned non-zero exit status {self.retcode}."
 
@@ -25,6 +30,9 @@ class TerraformFdReadError(LibTerraformError):
 
     def __init__(self, fd):
         self.fd = fd
+
+    def __reduce__(self):
+        return (self.__class__, (self.fd,))
 
     def __str__(self):
         return f"Read from fd {self.fd} error."

@@ -3,6 +3,7 @@ import platform
 import re
 import shutil
 import subprocess
+import sysconfig
 
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
@@ -23,6 +24,19 @@ def native_go_source_paths(root):
         os.path.join(root, "native", "go", "libterraform.go"),
         os.path.join(root, "native", "go", "plugin_patch.go"),
     )
+
+
+def wheel_platform_tag(system_name=None, platform_name=None):
+    system_name = system_name or platform.system()
+    platform_name = platform_name or sysconfig.get_platform()
+    tag = platform_name.replace("-", "_").replace(".", "_")
+    if system_name == "Linux" and tag.startswith("linux_"):
+        return tag.replace("linux_", "manylinux_2_35_", 1)
+    return tag
+
+
+def wheel_tag(system_name=None, platform_name=None):
+    return f"py3-none-{wheel_platform_tag(system_name, platform_name)}"
 
 
 def go_plugin_version_from_mod(mod_content):
@@ -56,7 +70,8 @@ def go_mod_content_with_go_plugin_replace(mod_content, plugin_dir):
 class CustomBuildHook(BuildHookInterface):
     def initialize(self, version, build_data):
         build_data["pure_python"] = False
-        build_data["infer_tag"] = True
+        build_data["infer_tag"] = False
+        build_data["tag"] = wheel_tag()
 
         target_arch = os.environ.get("TARGET_ARCH", "")
         lib_filename = (
