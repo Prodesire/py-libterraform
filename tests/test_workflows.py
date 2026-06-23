@@ -62,14 +62,77 @@ def test_release_workflow_runs_tests_before_publishing():
     publish_job = content.split("  publish:", maxsplit=1)[1]
 
     assert (
-        "      - name: Run tests\n        run: |\n          uv run pytest\n"
+        "      - name: Run tests\n"
+        "        timeout-minutes: 15\n"
+        "        run: |\n"
+        "          uv run python -X faulthandler -m pytest -vv "
+        "--durations=20 --timeout=120 --timeout-method=thread\n"
     ) in build_job
-    assert build_job.index("uv build --wheel") < build_job.index("uv run pytest")
-    assert build_job.index("uv run pytest") < build_job.index(
+    assert build_job.index("uv build --wheel") < build_job.index(
+        "python -X faulthandler -m pytest"
+    )
+    assert build_job.index("python -X faulthandler -m pytest") < build_job.index(
         "Upload distribution artifacts"
     )
-    assert "uv run pytest" not in macos_x64_job
-    assert "uv run pytest" not in publish_job
+    assert "python -X faulthandler -m pytest" not in macos_x64_job
+    assert "python -X faulthandler -m pytest" not in publish_job
+
+
+def test_release_workflow_builds_one_distribution_per_platform_target():
+    content = (ROOT / ".github" / "workflows" / "release.yml").read_text(
+        encoding="utf-8"
+    )
+    build_job = content.split("  build-macos-x64:", maxsplit=1)[0]
+    macos_x64_job = content.split("  build-macos-x64:", maxsplit=1)[1].split(
+        "  publish:",
+        maxsplit=1,
+    )[0]
+
+    assert "os: [ ubuntu-22.04, windows-2022, macos-14 ]" in build_job
+    assert (
+        "python-version: [ '3.9', '3.10', '3.11', '3.12', '3.13', '3.14' ]"
+        not in content
+    )
+    assert "matrix.python-version" not in content
+    assert "Set up Python 3.14" in build_job
+    assert "python-version: '3.14'" in build_job
+    assert "name: libterraform-dist-${{ matrix.os }}" in build_job
+    assert "Set up Python 3.14" in macos_x64_job
+    assert "name: libterraform-dist-macos-x64" in macos_x64_job
+
+
+def test_release_workflow_verifies_four_distribution_artifacts_before_publish():
+    content = (ROOT / ".github" / "workflows" / "release.yml").read_text(
+        encoding="utf-8"
+    )
+    publish_job = content.split("  publish:", maxsplit=1)[1]
+
+    assert "Verify distribution artifacts" in publish_job
+    assert "expected_count = 4" in publish_job
+    assert "Trailing data" in publish_job
+    assert publish_job.index("Verify distribution artifacts") < publish_job.index(
+        "Create Release"
+    )
+    assert publish_job.index("Verify distribution artifacts") < publish_job.index(
+        "Publish to PyPI"
+    )
+
+
+def test_workflows_run_pytest_with_hang_diagnostics():
+    expected = (
+        "      - name: Run tests\n"
+        "        timeout-minutes: 15\n"
+        "        run: |\n"
+        "          uv run python -X faulthandler -m pytest -vv "
+        "--durations=20 --timeout=120 --timeout-method=thread\n"
+    )
+
+    for workflow_name in ("test.yml", "release.yml"):
+        content = (ROOT / ".github" / "workflows" / workflow_name).read_text(
+            encoding="utf-8"
+        )
+
+        assert expected in content
 
 
 def test_release_workflow_retries_pypi_publish_three_times():
@@ -80,27 +143,27 @@ def test_release_workflow_retries_pypi_publish_three_times():
 
     assert "for attempt in 1 2 3; do" in publish_job
     assert (
-        "uv publish --trusted-publishing automatic "
+        "uv publish --trusted-publishing never "
         "--check-url https://pypi.org/simple/ dist/* && exit 0"
     ) in publish_job
     assert 'if [ "$attempt" -lt 3 ]; then' in publish_job
     assert "exit 1" in publish_job
+    assert "upload.pypi.org/legacy" not in publish_job
 
 
-def test_release_workflow_uses_trusted_publishing_without_pypi_token():
+def test_release_workflow_uses_pypi_token_secret():
     content = (ROOT / ".github" / "workflows" / "release.yml").read_text(
         encoding="utf-8"
     )
     publish_job = content.split("  publish:", maxsplit=1)[1]
 
     assert "permissions:" in publish_job
-    assert "id-token: write" in publish_job
     assert "contents: write" in publish_job
+    assert "id-token: write" not in publish_job
     assert "environment:" in publish_job
     assert "name: pypi" in publish_job
-    assert "UV_PUBLISH_TOKEN" not in publish_job
-    assert "secrets.PYPI_TOKEN" not in publish_job
-    assert "--trusted-publishing automatic" in publish_job
+    assert "UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}" in publish_job
+    assert "--trusted-publishing never" in publish_job
 
 
 def test_release_workflow_normalizes_linux_wheel_tags_with_script():

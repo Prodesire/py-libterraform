@@ -39,6 +39,14 @@ def nav_titles(items: list[dict[str, Any]]) -> list[str]:
     return titles
 
 
+def nav_group(items: list[dict[str, Any]], title: str) -> list[dict[str, Any]]:
+    for item in items:
+        value = item.get(title)
+        if isinstance(value, list):
+            return value
+    raise AssertionError(f"navigation group not found: {title}")
+
+
 def public_methods(path: str, class_name: str) -> list[str]:
     module = ast.parse(read_text(path))
     for node in module.body:
@@ -80,24 +88,17 @@ def test_zensical_config_generates_api_docs_for_project_pages_url():
     assert project["site_dir"] == "site"
     assert project["edit_uri"] == "edit/main/docs/en/"
     assert_theme_assets(project)
-    assert {"TerraformCommand": "api/terraform-command.md"} in project["nav"][2][
-        "API Reference"
-    ]
-    assert {"AsyncTerraformCommand": "api/async-terraform-command.md"} in project[
-        "nav"
-    ][2]["API Reference"]
-    assert {"TerraformPool": "api/terraform-pool.md"} in project["nav"][2][
-        "API Reference"
-    ]
-    assert {"Results & Streaming": "api/results.md"} in project["nav"][2][
-        "API Reference"
-    ]
-    assert {"Parallel Execution": "parallel-execution.md"} in project["nav"][1][
-        "Getting Started"
-    ]
-    assert {"Plan Results and Streaming": "structured-and-streaming.md"} in project[
-        "nav"
-    ][1]["Getting Started"]
+    assert project["nav"][2] == {"Choosing an Integration": "alternatives.md"}
+    api_reference = nav_group(project["nav"], "API Reference")
+    getting_started = nav_group(project["nav"], "Getting Started")
+    assert {"TerraformCommand": "api/terraform-command.md"} in api_reference
+    assert {"AsyncTerraformCommand": "api/async-terraform-command.md"} in api_reference
+    assert {"TerraformPool": "api/terraform-pool.md"} in api_reference
+    assert {"Results & Streaming": "api/results.md"} in api_reference
+    assert {"Parallel Execution": "parallel-execution.md"} in getting_started
+    assert {"Plan Results and Streaming": "structured-and-streaming.md"} in (
+        getting_started
+    )
 
     python_handler = project["plugins"]["mkdocstrings"]["handlers"]["python"]
     assert python_handler["paths"] == ["src"]
@@ -137,12 +138,13 @@ def test_chinese_zensical_config_uses_separate_language_site():
     assert "发布策略" in titles
     assert "Home" not in titles
     assert "Getting Started" not in titles
-    assert {"并行执行": "parallel-execution.md"} in project["nav"][1]["入门"]
-    assert {"Plan 结果与流式输出": "structured-and-streaming.md"} in project["nav"][1][
-        "入门"
-    ]
-    assert {"TerraformPool": "api/terraform-pool.md"} in project["nav"][2]["API 参考"]
-    assert {"结果与流式": "api/results.md"} in project["nav"][2]["API 参考"]
+    assert project["nav"][2] == {"如何选择集成方式": "alternatives.md"}
+    getting_started = nav_group(project["nav"], "入门")
+    api_reference = nav_group(project["nav"], "API 参考")
+    assert {"并行执行": "parallel-execution.md"} in getting_started
+    assert {"Plan 结果与流式输出": "structured-and-streaming.md"} in getting_started
+    assert {"TerraformPool": "api/terraform-pool.md"} in api_reference
+    assert {"结果与流式": "api/results.md"} in api_reference
     assert project["extra"]["alternate"] == [
         {
             "name": "English",
@@ -237,7 +239,7 @@ def test_docs_include_0_15_version_mapping():
     chinese_policy = read_text("docs/zh/release-policy.md")
 
     for page in [english_index, chinese_index]:
-        assert "libterraform/0.15.1/" in page
+        assert "libterraform/0.15.2/" in page
         assert "terraform/tree/v1.15.5" in page
 
     assert "`0.15.x` | `1.15.x` | `release/0.15`" in english_policy
@@ -376,10 +378,11 @@ def test_chinese_development_docs_include_release_policy_and_full_sections():
         "release-matrix.json",
         "python scripts/verify_release_matrix.py",
         "make inspect-upstream",
-        "Trusted Publishing",
+        "uv publish --trusted-publishing never",
         "py3-none-manylinux_2_35_x86_64",
     ]:
         assert phrase in development_page
+    assert "Trusted Publishing" not in development_page
 
     for phrase in [
         "# 发布策略",

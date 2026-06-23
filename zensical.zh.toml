@@ -16,6 +16,7 @@ nav = [
     { "并行执行" = "parallel-execution.md" },
     { "Plan 结果与流式输出" = "structured-and-streaming.md" },
   ] },
+  { "如何选择集成方式" = "alternatives.md" },
   { "API 参考" = [
     { "概览" = "api/index.md" },
     { "TerraformCommand" = "api/terraform-command.md" },

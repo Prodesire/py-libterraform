@@ -16,6 +16,7 @@ nav = [
     { "Parallel Execution" = "parallel-execution.md" },
     { "Plan Results and Streaming" = "structured-and-streaming.md" },
   ] },
+  { "Choosing an Integration" = "alternatives.md" },
   { "API Reference" = [
     { "Overview" = "api/index.md" },
     { "TerraformCommand" = "api/terraform-command.md" },

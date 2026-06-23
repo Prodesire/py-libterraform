@@ -164,6 +164,7 @@ dev = [
     { name = "pytest", version = "9.0.3", source = { registry = "https://pypi.mirrors.ustc.edu.cn/simple/" }, marker = "python_full_version >= '3.10'" },
     { name = "pytest-asyncio", version = "1.2.0", source = { registry = "https://pypi.mirrors.ustc.edu.cn/simple/" }, marker = "python_full_version < '3.10'" },
     { name = "pytest-asyncio", version = "1.4.0", source = { registry = "https://pypi.mirrors.ustc.edu.cn/simple/" }, marker = "python_full_version >= '3.10'" },
+    { name = "pytest-timeout" },
     { name = "ruff" },
     { name = "tomli" },
     { name = "ty" },
@@ -180,6 +181,7 @@ dev = [
     { name = "hatchling", specifier = ">=1.27.0" },
     { name = "pytest", specifier = ">=7.0.1" },
     { name = "pytest-asyncio", specifier = ">=1.0.0" },
+    { name = "pytest-timeout", specifier = ">=2.4.0" },
     { name = "ruff", specifier = ">=0.5.2" },
     { name = "tomli", specifier = ">=2.0.1" },
     { name = "ty", specifier = ">=0.0.42" },
@@ -519,6 +521,19 @@ dependencies = [
 sdist = { url = "https://mirrors.ustc.edu.cn/pypi/packages/43/7c/d36d04db312ecf4298932ef77e6e4a9e8ad017906e24e34f0b0c361a2473/pytest_asyncio-1.4.0.tar.gz", hash = "sha256:c6c0d2259945122819f171a32ecea2c349ead889ee28176caaf492143424be42", size = 58514, upload-time = "2026-05-26T09:56:04.083Z" }
 wheels = [
     { url = "https://mirrors.ustc.edu.cn/pypi/packages/03/e2/08a497ef684b88559c9cc5f4ad53a37e7b99e727094a86d6ea32536d5d3c/pytest_asyncio-1.4.0-py3-none-any.whl", hash = "sha256:933ca923a23075a87fb7070c0ec272a6848489824d887c85c812670932835aa1", size = 16930, upload-time = "2026-05-26T09:56:02.576Z" },
+]
+
+[[package]]
+name = "pytest-timeout"
+version = "2.4.0"
+source = { registry = "https://pypi.mirrors.ustc.edu.cn/simple/" }
+dependencies = [
+    { name = "pytest", version = "8.4.2", source = { registry = "https://pypi.mirrors.ustc.edu.cn/simple/" }, marker = "python_full_version < '3.10'" },
+    { name = "pytest", version = "9.0.3", source = { registry = "https://pypi.mirrors.ustc.edu.cn/simple/" }, marker = "python_full_version >= '3.10'" },
+]
+sdist = { url = "https://mirrors.ustc.edu.cn/pypi/packages/ac/82/4c9ecabab13363e72d880f2fb504c5f750433b2b6f16e99f4ec21ada284c/pytest_timeout-2.4.0.tar.gz", hash = "sha256:7e68e90b01f9eff71332b25001f85c75495fc4e3a836701876183c4bcfd0540a", size = 17973, upload-time = "2025-05-05T19:44:34.99Z" }
+wheels = [
+    { url = "https://mirrors.ustc.edu.cn/pypi/packages/fa/b6/3127540ecdf1464a00e5a01ee60a1b09175f6913f0644ac748494d9c4b21/pytest_timeout-2.4.0-py3-none-any.whl", hash = "sha256:c42667e5cdadb151aeb5b26d114aff6bdf5a907f176a007a30b940d3d865b5c2", size = 14382, upload-time = "2025-05-05T19:44:33.502Z" },
 ]
 
 [[package]]

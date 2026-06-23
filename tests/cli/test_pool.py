@@ -5,6 +5,7 @@ from concurrent.futures import Future
 import pytest
 
 from libterraform import TerraformCommand, TerraformPool
+import libterraform.pool as pool_module
 from libterraform.cli import CommandResult
 from libterraform.exceptions import TerraformCommandError
 from libterraform.pool import PoolCommand
@@ -67,6 +68,47 @@ def test_pool_shutdown_rejects_new_work():
 
     with pytest.raises(RuntimeError):
         pool.run("version")
+
+
+def test_pool_defaults_to_spawn_context(monkeypatch):
+    calls = []
+    created = {}
+
+    class FakeManager:
+        def dict(self):
+            return {}
+
+        def shutdown(self):
+            pass
+
+    class FakeContext:
+        def Manager(self):
+            return FakeManager()
+
+    class FakeExecutor:
+        def __init__(self, **kwargs):
+            created.update(kwargs)
+
+        def shutdown(self, wait=True, *, cancel_futures=False):
+            created["shutdown"] = (wait, cancel_futures)
+
+    fake_context = FakeContext()
+
+    def fake_get_context(method):
+        calls.append(method)
+        return fake_context
+
+    monkeypatch.setattr(pool_module.multiprocessing, "get_context", fake_get_context)
+    monkeypatch.setattr(pool_module, "ProcessPoolExecutor", FakeExecutor)
+
+    pool = TerraformPool(max_workers=1)
+    pool.shutdown()
+
+    assert calls == ["spawn"]
+    assert created["max_workers"] == 1
+    assert created["mp_context"] is fake_context
+    assert created["initargs"][0] == {}
+    assert created["shutdown"] == (True, False)
 
 
 def test_pool_command_proxy_exposes_public_sync_methods():

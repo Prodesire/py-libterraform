@@ -154,10 +154,9 @@ The wheel build uses Python ABI-independent platform tags such as
 package loads the bundled Terraform shared library with `ctypes` instead of a
 CPython extension module. During release builds, Linux wheel tags are also
 normalized by `scripts/normalize_wheel_tags.py` as a guardrail. The release
-workflow publishes with PyPI Trusted Publishing through
-`uv publish --trusted-publishing automatic`, so the workflow needs the `pypi`
-environment configured as a trusted publisher on PyPI rather than a long-lived
-`PYPI_TOKEN` secret.
+workflow builds one distribution per platform target, using Python 3.14 as the
+build environment because the wheels are Python ABI-independent. Publishing uses
+`uv publish --trusted-publishing never` with the `PYPI_TOKEN` secret.
 
 ## Troubleshooting
 
