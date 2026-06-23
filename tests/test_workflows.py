@@ -78,6 +78,46 @@ def test_release_workflow_runs_tests_before_publishing():
     assert "python -X faulthandler -m pytest" not in publish_job
 
 
+def test_release_workflow_builds_one_distribution_per_platform_target():
+    content = (ROOT / ".github" / "workflows" / "release.yml").read_text(
+        encoding="utf-8"
+    )
+    build_job = content.split("  build-macos-x64:", maxsplit=1)[0]
+    macos_x64_job = content.split("  build-macos-x64:", maxsplit=1)[1].split(
+        "  publish:",
+        maxsplit=1,
+    )[0]
+
+    assert "os: [ ubuntu-22.04, windows-2022, macos-14 ]" in build_job
+    assert (
+        "python-version: [ '3.9', '3.10', '3.11', '3.12', '3.13', '3.14' ]"
+        not in content
+    )
+    assert "matrix.python-version" not in content
+    assert "Set up Python 3.14" in build_job
+    assert "python-version: '3.14'" in build_job
+    assert "name: libterraform-dist-${{ matrix.os }}" in build_job
+    assert "Set up Python 3.14" in macos_x64_job
+    assert "name: libterraform-dist-macos-x64" in macos_x64_job
+
+
+def test_release_workflow_verifies_four_distribution_artifacts_before_publish():
+    content = (ROOT / ".github" / "workflows" / "release.yml").read_text(
+        encoding="utf-8"
+    )
+    publish_job = content.split("  publish:", maxsplit=1)[1]
+
+    assert "Verify distribution artifacts" in publish_job
+    assert "expected_count = 4" in publish_job
+    assert "Trailing data" in publish_job
+    assert publish_job.index("Verify distribution artifacts") < publish_job.index(
+        "Create Release"
+    )
+    assert publish_job.index("Verify distribution artifacts") < publish_job.index(
+        "Publish to PyPI"
+    )
+
+
 def test_workflows_run_pytest_with_hang_diagnostics():
     expected = (
         "      - name: Run tests\n"
@@ -108,6 +148,7 @@ def test_release_workflow_retries_pypi_publish_three_times():
     ) in publish_job
     assert 'if [ "$attempt" -lt 3 ]; then' in publish_job
     assert "exit 1" in publish_job
+    assert "upload.pypi.org/legacy" not in publish_job
 
 
 def test_release_workflow_uses_pypi_token_secret():

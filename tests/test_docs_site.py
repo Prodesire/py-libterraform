@@ -239,7 +239,7 @@ def test_docs_include_0_15_version_mapping():
     chinese_policy = read_text("docs/zh/release-policy.md")
 
     for page in [english_index, chinese_index]:
-        assert "libterraform/0.15.1/" in page
+        assert "libterraform/0.15.2/" in page
         assert "terraform/tree/v1.15.5" in page
 
     assert "`0.15.x` | `1.15.x` | `release/0.15`" in english_policy
@@ -378,10 +378,11 @@ def test_chinese_development_docs_include_release_policy_and_full_sections():
         "release-matrix.json",
         "python scripts/verify_release_matrix.py",
         "make inspect-upstream",
-        "Trusted Publishing",
+        "uv publish --trusted-publishing never",
         "py3-none-manylinux_2_35_x86_64",
     ]:
         assert phrase in development_page
+    assert "Trusted Publishing" not in development_page
 
     for phrase in [
         "# 发布策略",

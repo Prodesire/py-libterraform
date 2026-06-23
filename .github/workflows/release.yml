@@ -10,7 +10,6 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-22.04, windows-2022, macos-14 ]
-        python-version: [ '3.9', '3.10', '3.11', '3.12', '3.13', '3.14' ]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Check out repository code
@@ -21,10 +20,10 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: upstream/terraform/go.mod
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.14
         uses: actions/setup-python@v6
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.14'
       - name: Set up uv
         uses: astral-sh/setup-uv@v6
       - name: Build distributions
@@ -41,12 +40,9 @@ jobs:
       - name: Upload distribution artifacts
         uses: actions/upload-artifact@v5
         with:
-          name: libterraform-dist-${{ matrix.os }}-${{ matrix.python-version }}
+          name: libterraform-dist-${{ matrix.os }}
           path: dist
   build-macos-x64:
-    strategy:
-      matrix:
-        python-version: [ '3.9', '3.10', '3.11', '3.12', '3.13', '3.14' ]
     runs-on: macos-14
     env:
       TARGET_ARCH: amd64
@@ -61,10 +57,10 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: upstream/terraform/go.mod
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.14
         uses: actions/setup-python@v6
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.14'
       - name: Set up uv
         uses: astral-sh/setup-uv@v6
       - name: Build distributions
@@ -73,11 +69,11 @@ jobs:
       - name: Upload distribution artifacts
         uses: actions/upload-artifact@v5
         with:
-          name: libterraform-dist-macos-x64-${{ matrix.python-version }}
+          name: libterraform-dist-macos-x64
           path: dist
   publish:
     needs: [ build, build-macos-x64 ]
-    runs-on: macos-14
+    runs-on: ubuntu-22.04
     environment:
       name: pypi
       url: https://pypi.org/p/libterraform
@@ -98,6 +94,41 @@ jobs:
           pattern: libterraform-dist-*
           path: dist
           merge-multiple: true
+      - name: Verify distribution artifacts
+        run: |
+          python - <<'PY'
+          from collections import Counter
+          from pathlib import Path
+          import sys
+
+          dist = Path("dist")
+          wheels = sorted(dist.glob("*.whl"))
+          expected_count = 4
+          if len(wheels) != expected_count:
+              names = "\n".join(path.name for path in wheels)
+              sys.exit(
+                  f"Expected {expected_count} wheel artifacts, found {len(wheels)}:\n"
+                  f"{names}"
+              )
+
+          counts = Counter(path.name for path in wheels)
+          duplicates = sorted(name for name, count in counts.items() if count > 1)
+          if duplicates:
+              sys.exit(f"Duplicate wheel artifacts: {', '.join(duplicates)}")
+
+          for path in wheels:
+              data = path.read_bytes()
+              signature = b"PK\x05\x06"
+              eocd = data.rfind(signature)
+              if eocd < 0:
+                  sys.exit(f"Missing ZIP end-of-central-directory record: {path.name}")
+              if eocd + 22 > len(data):
+                  sys.exit(f"Truncated ZIP end-of-central-directory record: {path.name}")
+              comment_length = int.from_bytes(data[eocd + 20 : eocd + 22], "little")
+              expected_end = eocd + 22 + comment_length
+              if expected_end != len(data):
+                  sys.exit(f"Trailing data after ZIP archive: {path.name}")
+          PY
       - name: Create Release
         uses: softprops/action-gh-release@v2
       - name: Publish to PyPI

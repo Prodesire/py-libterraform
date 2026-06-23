@@ -147,9 +147,9 @@ wheel 构建使用与 Python ABI 无关的平台 tag，例如
 `py3-none-macosx_14_0_arm64` 和 `py3-none-manylinux_2_35_x86_64`，因为本包通过
 `ctypes` 加载内置 Terraform 共享库，而不是 CPython extension module。发布构建期间，
 Linux wheel tag 也会由 `scripts/normalize_wheel_tags.py` 作为防护统一规范化。
-release workflow 通过 `uv publish --trusted-publishing automatic` 使用 PyPI
-Trusted Publishing 发布，因此需要在 PyPI 上把 `pypi` environment 配置为 trusted
-publisher，而不是依赖长期有效的 `PYPI_TOKEN` secret。
+release workflow 每个平台目标只构建一个 distribution，并使用 Python 3.14 作为构建
+环境，因为 wheel 与 Python ABI 无关。发布通过
+`uv publish --trusted-publishing never` 和 `PYPI_TOKEN` secret 完成。
 
 ## 故障排查
 

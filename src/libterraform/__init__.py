@@ -3,7 +3,7 @@ from ctypes import c_void_p, cdll
 
 from libterraform.common import WINDOWS
 
-__version__ = "0.15.1"
+__version__ = "0.15.2"
 
 root = os.path.dirname(os.path.abspath(__file__))
 _lib_filename = "libterraform.dll" if WINDOWS else "libterraform.so"
