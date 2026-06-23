@@ -5,7 +5,7 @@ so the useful question is not "which one is best?" but "which integration model
 matches this system?"
 
 Use this page when deciding between `libterraform`, `python-terraform`, TofuPy,
-CDK for Terraform, Pulumi, or a direct `subprocess` call.
+CDKTN, Pulumi, CDK for Terraform (deprecated), or a direct `subprocess` call.
 
 ## Short Answer
 
@@ -15,8 +15,8 @@ controlled as a library rather than as an external command-line dependency.
 Python APIs for Terraform commands, and can use Terraform internals to parse
 configuration directories.
 
-Choose another option when your main need is to generate infrastructure code
-from Python, support OpenTofu, or keep using a locally installed `terraform`
+Choose another option when your main need is to author infrastructure with
+Python, support OpenTofu, or keep using a locally installed `terraform`
 binary.
 
 ## Comparison
@@ -27,8 +27,9 @@ binary.
 | `python-terraform` | Wrapper around an installed `terraform` CLI | Existing scripts that already have Terraform installed and only need a light command wrapper | Depends on an external binary; returns raw process output; the upstream project has had long maintenance gaps |
 | TofuPy | Wrapper around installed OpenTofu or Terraform binaries | Teams that want a modern Python wrapper and need OpenTofu support | Still requires `tofu` or `terraform` on `PATH`; it wraps the executable rather than embedding Terraform into the Python package |
 | Direct `subprocess` | Your code shells out to `terraform` directly | Small scripts, CI jobs, and cases where explicit process control is enough | You own argument conversion, JSON parsing, error handling, streaming, cancellation, and binary management |
-| CDK for Terraform | Python defines infrastructure that is synthesized to Terraform configuration | Teams that want to author infrastructure with a programming-language model | It is not a drop-in wrapper for running existing Terraform modules from Python |
 | Pulumi | Python program drives Pulumi's infrastructure engine | Teams choosing a Pulumi workflow instead of Terraform CLI workflows | It changes the infrastructure workflow rather than embedding Terraform in a Python application |
+| CDKTN | Community continuation of the CDKTF programming-language model | Existing CDKTF users, or teams intentionally choosing a community-maintained CDK-style workflow for Terraform or OpenTofu | Evaluate maturity, provider coverage, release cadence, and long-term governance before adopting |
+| CDK for Terraform (deprecated) | Python defines infrastructure that is synthesized to Terraform configuration | Existing CDKTF codebases that are migrating, or readers comparing historical Python-authoring options | Deprecated by HashiCorp and the upstream repository is archived; no longer a new-project recommendation |
 
 ## When `libterraform` Fits
 
@@ -59,10 +60,25 @@ Prefer another option when:
   `terraform` executable is used. A CLI wrapper or direct `subprocess` call is
   simpler.
 - You are authoring infrastructure in Python rather than running existing
-  Terraform modules. CDK for Terraform or Pulumi may be a better model.
+  Terraform modules. Pulumi, CDKTN, or standard HCL may be a better model.
+  CDK for Terraform is now deprecated and mainly relevant for migration context.
 - You need many Terraform versions selected dynamically at runtime from a single
   installed package. `libterraform` release lines intentionally map to specific
   Terraform version lines.
+
+## Note on CDK for Terraform
+
+CDK for Terraform remains useful context because many Python/Terraform
+discussions still mention it, but it should not be treated as a current default
+choice for new projects. HashiCorp
+[deprecated CDKTF](https://developer.hashicorp.com/terraform/cdktf) on
+December 10, 2025, and the upstream
+[`hashicorp/terraform-cdk`](https://github.com/hashicorp/terraform-cdk)
+repository is archived. For new work, prefer standard HCL and Terraform CLI
+when you want Terraform's declarative workflow, Pulumi when you want an IaC
+engine built around programming languages, or evaluate
+[CDKTN](https://cdktn.io/) if you specifically want a community continuation of
+the CDKTF model.
 
 ## Why Not Just Avoid One Process?
 

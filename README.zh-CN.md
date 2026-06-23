@@ -72,8 +72,8 @@ pool 会启动 worker 进程，因此上述代码必须运行在 `if __name__ ==
 
 如果你正在比较 Python Terraform 生态中的不同选择，可以阅读
 [如何选择 Python Terraform 集成方式](https://prodesire.github.io/py-libterraform/zh/alternatives/)：
-其中对比了 `python-terraform`、TofuPy、直接 `subprocess`、CDK for Terraform
-和 Pulumi。
+其中对比了 `python-terraform`、TofuPy、直接 `subprocess`、Pulumi、CDKTN
+和已弃用的 CDK for Terraform。
 
 ## 贡献
 

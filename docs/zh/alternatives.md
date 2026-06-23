@@ -3,8 +3,8 @@
 Python 生态里有多种方式可以和 Terraform 协作。它们解决的问题不同，因此关键不是
 “哪个最好”，而是“哪种集成模型适合当前系统”。
 
-如果你在 `libterraform`、`python-terraform`、TofuPy、CDK for Terraform、
-Pulumi 或直接 `subprocess` 调用之间做选择，可以先看这一页。
+如果你在 `libterraform`、`python-terraform`、TofuPy、CDKTN、Pulumi、
+已弃用的 CDK for Terraform 或直接 `subprocess` 调用之间做选择，可以先看这一页。
 
 ## 简短结论
 
@@ -12,7 +12,7 @@ Pulumi 或直接 `subprocess` 调用之间做选择，可以先看这一页。
 适合选择 `libterraform`。`libterraform` 在 wheel 中内置 Terraform 共享库，提供
 执行 Terraform 命令的 Python API，并可以使用 Terraform 内部能力解析配置目录。
 
-如果你的主要需求是用 Python 生成基础设施代码、支持 OpenTofu，或继续使用本机已经
+如果你的主要需求是用 Python 编写基础设施、支持 OpenTofu，或继续使用本机已经
 安装的 `terraform` 可执行文件，那么其他方案可能更合适。
 
 ## 对比
@@ -23,8 +23,9 @@ Pulumi 或直接 `subprocess` 调用之间做选择，可以先看这一页。
 | `python-terraform` | 封装已安装的 `terraform` CLI | 已经安装 Terraform、只需要轻量命令封装的既有脚本 | 依赖外部 binary；主要返回进程输出；上游项目长期存在维护间隔 |
 | TofuPy | 封装已安装的 OpenTofu 或 Terraform binary | 希望使用现代 Python wrapper，并且需要 OpenTofu 支持的团队 | 仍要求 `tofu` 或 `terraform` 在 `PATH` 中；它封装的是可执行文件，而不是把 Terraform 嵌入 Python 包 |
 | 直接 `subprocess` | 业务代码直接启动 `terraform` 进程 | 小脚本、CI job，或显式进程控制已经足够的场景 | 参数转换、JSON 解析、错误处理、流式输出、取消和 binary 管理都需要自己维护 |
-| CDK for Terraform | 用 Python 描述基础设施，再合成为 Terraform 配置 | 希望用编程语言模型编写基础设施的团队 | 不是用于从 Python 直接运行已有 Terraform 模块的 drop-in wrapper |
 | Pulumi | Python 程序驱动 Pulumi 的基础设施引擎 | 准备选择 Pulumi 工作流，而不是 Terraform CLI 工作流的团队 | 它改变的是基础设施工作流，而不是把 Terraform 嵌入 Python 应用 |
+| CDKTN | CDKTF 编程语言模型的社区延续版本 | 已经投入 CDKTF 模型，或明确选择社区维护的 Terraform/OpenTofu CDK-style 工作流的团队 | 采用前需要评估成熟度、provider 覆盖、发布节奏和长期治理 |
+| CDK for Terraform（已弃用） | 用 Python 描述基础设施，再合成为 Terraform 配置 | 既有 CDKTF 项目的迁移，或理解历史上的 Python authoring 方案 | HashiCorp 已弃用且上游仓库已归档；不再建议作为新项目默认选择 |
 
 ## 什么时候适合 `libterraform`
 
@@ -47,10 +48,20 @@ Pulumi 或直接 `subprocess` 调用之间做选择，可以先看这一页。
   binary。
 - 你希望由操作系统或 CI 镜像精确控制使用哪一个 `terraform` 可执行文件。CLI
   wrapper 或直接 `subprocess` 更简单。
-- 你是在用 Python 编写基础设施，而不是运行已有 Terraform 模块。CDK for
-  Terraform 或 Pulumi 的模型可能更合适。
+- 你是在用 Python 编写基础设施，而不是运行已有 Terraform 模块。Pulumi、CDKTN
+  或标准 HCL 的模型可能更合适；CDK for Terraform 已弃用，更适合作为迁移背景。
 - 你需要在同一个已安装包中，在运行时动态选择很多个 Terraform 版本。
   `libterraform` 的发布线会有意映射到特定 Terraform 版本线。
+
+## 关于 CDK for Terraform
+
+保留 CDK for Terraform 是为了给读者提供上下文：很多 Python/Terraform 讨论仍会提到
+它，但它已经不适合作为新项目的默认选择。HashiCorp 已在 2025 年 12 月 10 日
+[弃用 CDKTF](https://developer.hashicorp.com/terraform/cdktf)，上游
+[`hashicorp/terraform-cdk`](https://github.com/hashicorp/terraform-cdk)
+仓库也已归档。新项目如果想保留 Terraform 的声明式工作流，优先选择标准 HCL 和
+Terraform CLI；如果想选择围绕编程语言设计的 IaC 引擎，可以看 Pulumi；如果明确想
+延续 CDKTF 模型，可以评估社区 fork [CDKTN](https://cdktn.io/)。
 
 ## 为什么不只强调少启动一个进程
 

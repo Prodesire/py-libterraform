@@ -76,8 +76,8 @@ has a complete pool example.
 
 If you are choosing between Python Terraform options, see
 [Choosing a Python Terraform Integration](https://prodesire.github.io/py-libterraform/alternatives/)
-for a comparison with `python-terraform`, TofuPy, direct `subprocess`, CDK for
-Terraform, and Pulumi.
+for a comparison with `python-terraform`, TofuPy, direct `subprocess`, Pulumi,
+CDKTN, and deprecated CDK for Terraform.
 
 ## Contributing
 
