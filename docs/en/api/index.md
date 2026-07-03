@@ -5,9 +5,11 @@ The public package exports:
 ```python
 from libterraform import (
     AsyncTerraformCommand,
+    ProcessTerraformCommand,
     TerraformCommand,
     TerraformConfig,
     TerraformPool,
+    ThreadTerraformCommand,
 )
 ```
 
@@ -15,9 +17,9 @@ Exception classes are available from `libterraform.exceptions`.
 
 ## Pages
 
-- [TerraformCommand](terraform-command.md) covers command execution,
-  `CommandResult`, option conversion, JSON parsing, and Terraform CLI helper
-  methods.
+- [TerraformCommand](terraform-command.md) covers command execution, process and
+  thread backends, `CommandResult`, option conversion, JSON parsing, and
+  Terraform CLI helper methods.
 - [AsyncTerraformCommand](async-terraform-command.md) covers asyncio-compatible
   command execution for asyncio applications.
 - [TerraformPool](terraform-pool.md) covers process-based parallel execution of

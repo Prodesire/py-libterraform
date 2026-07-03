@@ -8,12 +8,22 @@ from libterraform import TerraformCommand
 
 Most high-level methods return a `CommandResult`.
 
-## Threading
+## Execution Backend
 
-`TerraformCommand` can be called from multiple Python threads. Calls are
-thread-safe, but Terraform CLI execution is serialized inside the shared
-library because Terraform uses process-wide state. Use separate processes for
-true parallel Terraform operations.
+`TerraformCommand` uses the `"process"` backend by default. Each Terraform CLI
+call runs in a controlled worker process, so Terraform's process-wide state
+(`os.chdir`, stdio, signal handling, plugin cleanup) does not leak into the
+caller process.
+
+Use `TerraformCommand(cwd, backend="thread")` or
+`TerraformCommand.run("version", backend="thread")` to opt in to the
+current-process backend. The thread backend keeps the previous low-overhead path
+and restores global state after each call, but other Python code in the same
+process can observe Terraform's temporary working-directory changes while a
+command is running.
+
+Use `TerraformPool` when you want to reuse worker processes or run independent
+module operations in parallel.
 
 ## CommandResult
 

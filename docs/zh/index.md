@@ -30,7 +30,7 @@
 
 | libterraform | Terraform |
 |---|---|
-| [0.15.2](https://pypi.org/project/libterraform/0.15.2/) | [1.15.5](https://github.com/hashicorp/terraform/tree/v1.15.5) |
+| [0.15.3](https://pypi.org/project/libterraform/0.15.3/) | [1.15.5](https://github.com/hashicorp/terraform/tree/v1.15.5) |
 | [0.14.0](https://pypi.org/project/libterraform/0.14.0/) | [1.14.9](https://github.com/hashicorp/terraform/tree/v1.14.9) |
 | [0.13.0](https://pypi.org/project/libterraform/0.13.0/) | [1.13.5](https://github.com/hashicorp/terraform/tree/v1.13.5) |
 | [0.12.0](https://pypi.org/project/libterraform/0.12.0/) | [1.12.2](https://github.com/hashicorp/terraform/tree/v1.12.2) |
@@ -46,13 +46,14 @@
 
 ## 运行约束
 
-`TerraformCommand` 可以被多个 Python 线程安全调用，但 Terraform CLI 会在共享库
-内部串行执行。Terraform 仍使用当前工作目录、stdio、checkpoint 状态和 plugin
-client 清理等进程级全局状态，因此真正并行的 Terraform 操作需要使用多个进程隔离。
+`TerraformCommand` 和 `AsyncTerraformCommand` 默认使用进程隔离执行。Terraform 仍使用
+当前工作目录、stdio、checkpoint 状态和 plugin client 清理等进程级全局状态，因此把
+CLI 放到受控 worker 进程中运行，可以避免这些状态泄漏到调用方进程。
 
-`AsyncTerraformCommand` 也遵循同样的 Terraform 执行约束。它让同步 API 可以在
-asyncio 应用中被 `await`，但不会让同一个 Python 进程内的 Terraform CLI 执行变成
-真正并行。
+只有在明确需要当前进程后端时，才使用 `backend="thread"`。该路径开销更低，并会在每次
+调用结束后恢复全局状态；但命令运行期间，同一 Python 进程中的其他代码仍可能观察到
+Terraform 临时修改后的全局状态。如果需要复用 worker 进程或让独立 Terraform 操作真正
+并行执行，请使用 `TerraformPool`。
 
 Terraform 操作仍可能影响真实基础设施，因此执行 `apply`、`destroy`、状态命令、
 导入和测试时，应保持与直接使用 Terraform CLI 相同的谨慎程度。

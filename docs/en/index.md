@@ -31,7 +31,7 @@ parsing Terraform configuration directories.
 
 | libterraform | Terraform |
 |---|---|
-| [0.15.2](https://pypi.org/project/libterraform/0.15.2/) | [1.15.5](https://github.com/hashicorp/terraform/tree/v1.15.5) |
+| [0.15.3](https://pypi.org/project/libterraform/0.15.3/) | [1.15.5](https://github.com/hashicorp/terraform/tree/v1.15.5) |
 | [0.14.0](https://pypi.org/project/libterraform/0.14.0/) | [1.14.9](https://github.com/hashicorp/terraform/tree/v1.14.9) |
 | [0.13.0](https://pypi.org/project/libterraform/0.13.0/) | [1.13.5](https://github.com/hashicorp/terraform/tree/v1.13.5) |
 | [0.12.0](https://pypi.org/project/libterraform/0.12.0/) | [1.12.2](https://github.com/hashicorp/terraform/tree/v1.12.2) |
@@ -47,15 +47,17 @@ parsing Terraform configuration directories.
 
 ## Runtime Constraints
 
-`TerraformCommand` is safe to call from multiple Python threads, but Terraform
-CLI execution is serialized inside the shared library. Terraform still uses
-process-wide state such as the current working directory, stdio, checkpoint
-state, and plugin client cleanup, so true parallel Terraform operations require
-separate processes.
+`TerraformCommand` and `AsyncTerraformCommand` use process-isolated execution by
+default. Terraform still uses process-wide state such as the current working
+directory, stdio, checkpoint state, and plugin client cleanup, so running the CLI
+in a controlled worker process prevents that state from leaking into the caller
+process.
 
-`AsyncTerraformCommand` has the same Terraform execution constraint. It makes
-the synchronous API awaitable for asyncio applications, but it does not make
-Terraform CLI execution parallel inside one Python process.
+Use `backend="thread"` only when you explicitly want the current-process backend.
+That path is lower overhead and restores global state after each call, but other
+Python code in the same process can observe Terraform's temporary global-state
+changes while a command is running. Use `TerraformPool` to reuse worker processes
+or run independent Terraform operations in parallel.
 
 Terraform operations can still affect real infrastructure, so use `apply`,
 `destroy`, state commands, imports, and tests with the same caution as the

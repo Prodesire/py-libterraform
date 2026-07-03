@@ -7,20 +7,23 @@ from libterraform import AsyncTerraformCommand
 ```
 
 `AsyncTerraformCommand` 为 `TerraformCommand` 提供 asyncio 兼容 API。它镜像同步命令
-方法，并把阻塞的 Terraform 调用放到 worker thread 中执行，因此调用方可以
-`await` Terraform 操作，而不会阻塞 event loop。
+方法，并把阻塞的 Terraform 调用移出 event-loop thread，因此调用方可以 `await`
+Terraform 操作，而不会阻塞 event loop。
 
 ## 执行模型
 
-`AsyncTerraformCommand` 默认把阻塞调用放到 worker thread 中执行，因此不会让同一个
-Python 进程内的 Terraform CLI 调用变成真正并行。Terraform 仍然使用进程级全局状态，
-因此共享库内部仍会串行执行 CLI 调用。如需真正并行的 Terraform 操作，可传入
-[`TerraformPool`](terraform-pool.md) 作为 `pool`，让命令在 worker 进程中执行。
+`AsyncTerraformCommand` 默认使用 `TerraformCommand` 的 process backend。Terraform CLI
+调用会在受控 worker 进程中执行，因此 Terraform 的进程级全局状态不会泄漏到
+event-loop 进程。只有在明确需要当前进程后端时，才使用 `backend="thread"`。如果需要
+复用 worker 进程或让独立 Terraform 操作真正并行执行，可传入
+[`TerraformPool`](terraform-pool.md) 作为 `pool`。
 
-如果 coroutine 被取消，等待中的 task 会被取消，但该 API 不会直接终止已经在线程
-中运行的 Terraform 调用。`AsyncTerraformCommand` 会向 Terraform 的 shutdown channel 发送协作式取消
-请求，然后重新抛出 `asyncio.CancelledError`。Terraform 或 provider 仍可能需要一些
-时间从自己的 shutdown 流程中返回。
+如果 coroutine 被取消，等待中的 task 会被取消，并且当前 backend 会被请求停止该
+Terraform run。使用默认 process backend 时，worker 进程会被中断。使用
+`backend="thread"` 时，该 API 不会直接终止 worker thread；`AsyncTerraformCommand`
+会向 Terraform 的 shutdown channel 发送协作式取消请求，然后重新抛出
+`asyncio.CancelledError`。Terraform 或 provider 仍可能需要一些时间从自己的 shutdown
+流程中返回。
 
 ## 使用
 
@@ -39,7 +42,8 @@ plan = await cli.plan(check=True)
 retcode, stdout, stderr = await AsyncTerraformCommand.run("version")
 ```
 
-如果应用需要使用自己的线程池，可以传入 executor：
+如果应用需要使用自己的线程池，可以传入 executor。它只控制阻塞 Python wrapper 在哪里
+等待，不会把 Terraform 执行切换为 thread backend：
 
 ```python
 from concurrent.futures import ThreadPoolExecutor
@@ -47,6 +51,13 @@ from concurrent.futures import ThreadPoolExecutor
 with ThreadPoolExecutor(max_workers=1) as executor:
     cli = AsyncTerraformCommand("path/to/terraform/module", executor=executor)
     validation = await cli.validate(check=True)
+```
+
+如果要显式使用当前进程后端，请传入 `backend="thread"`：
+
+```python
+cli = AsyncTerraformCommand("path/to/terraform/module", backend="thread")
+validation = await cli.validate(check=True)
 ```
 
 传入 `TerraformPool` 作为 `pool`，即可等待在 worker 进程中执行的命令，从而获得真正
@@ -73,8 +84,9 @@ task = asyncio.create_task(cli.apply(auto_approve=True))
 task.cancel()
 ```
 
-这会请求 Terraform 通过正常 interrupt 处理停止。使用默认线程后端时，它不会直接终止
-worker thread；使用 `pool` 后端时，该请求会投递到运行该命令的 worker 进程。
+这会请求当前 backend 停止 Terraform。使用默认 process backend 时，worker 进程会被
+中断；使用 `backend="thread"` 时，它不会直接终止 worker thread；使用 `pool` 后端时，
+该请求会投递到运行该命令的 worker 进程。
 
 ::: libterraform.async_cli.AsyncTerraformCommand
     options:
