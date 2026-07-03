@@ -1,8 +1,12 @@
 import os
+import pickle
+import subprocess
+import sys
+import tempfile
 import uuid
 from contextvars import ContextVar
 from ctypes import POINTER, c_char_p, c_int, c_int64
-from threading import Thread
+from threading import Lock, Thread
 from typing import List, Optional, Sequence, Tuple, Union
 
 from libterraform import _lib_tf
@@ -40,11 +44,45 @@ _current_run_id: ContextVar[Optional[str]] = ContextVar(
     default=None,
 )
 
+_PROCESS_BACKEND = "process"
+_THREAD_BACKEND = "thread"
+_BACKENDS = frozenset({_PROCESS_BACKEND, _THREAD_BACKEND})
+_process_runs = {}
+_process_runs_lock = Lock()
+
 
 def _cancel_cli_run(run_id: str) -> int:
+    cancelled = _cancel_process_run(run_id)
     if not run_id or _cancel_cli is None:
-        return 0
-    return _cancel_cli(run_id.encode("utf-8"))
+        return 1 if cancelled else 0
+    native_cancelled = _cancel_cli(run_id.encode("utf-8"))
+    return 1 if cancelled or native_cancelled else 0
+
+
+def _cancel_process_run(run_id: str) -> bool:
+    if not run_id:
+        return False
+    with _process_runs_lock:
+        process = _process_runs.get(run_id)
+    if process is None:
+        return False
+    try:
+        if WINDOWS:
+            process.terminate()
+        else:
+            process.send_signal(2)
+    except ProcessLookupError:
+        pass
+    return True
+
+
+def _normalize_backend(backend: str) -> str:
+    if backend not in _BACKENDS:
+        raise ValueError(
+            f"Unsupported Terraform backend {backend!r}. "
+            f"Expected one of {sorted(_BACKENDS)!r}."
+        )
+    return backend
 
 
 def flag(value):
@@ -115,6 +153,110 @@ def _invoke_cli(argv, w_stdout_fd, w_stderr_fd, run_id=None):
     return _run_cli(argc, c_argv, w_stdout, w_stderr)
 
 
+def _run_argv_in_process(argv, check=False):
+    r_stdout_fd, w_stdout_fd = os.pipe()
+    r_stderr_fd, w_stderr_fd = os.pipe()
+
+    stdout_buffer = []
+    stderr_buffer = []
+    stdout_thread = Thread(
+        target=TerraformCommand._fdread, args=(r_stdout_fd, stdout_buffer)
+    )
+    stdout_thread.daemon = True
+    stdout_thread.start()
+    stderr_thread = Thread(
+        target=TerraformCommand._fdread, args=(r_stderr_fd, stderr_buffer)
+    )
+    stderr_thread.daemon = True
+    stderr_thread.start()
+
+    retcode = _invoke_cli(argv, w_stdout_fd, w_stderr_fd, _current_run_id.get())
+
+    stdout_thread.join()
+    stderr_thread.join()
+    if not stdout_buffer:
+        raise TerraformFdReadError(fd=r_stdout_fd)
+    if not stderr_buffer:
+        raise TerraformFdReadError(fd=r_stderr_fd)
+    stdout = stdout_buffer[0]
+    stderr = stderr_buffer[0]
+
+    if check and retcode not in (0, 2):
+        raise TerraformCommandError(retcode, argv, stdout, stderr)
+    return retcode, stdout, stderr
+
+
+def _run_argv_in_subprocess(argv, check=False):
+    payload = pickle.dumps({"argv": argv}, protocol=pickle.HIGHEST_PROTOCOL)
+    response_path = None
+    run_id = _current_run_id.get()
+    try:
+        with tempfile.NamedTemporaryFile(
+            prefix="libterraform-worker-", delete=False
+        ) as f:
+            response_path = f.name
+        process = subprocess.Popen(
+            [
+                sys.executable,
+                "-m",
+                "libterraform._process_worker",
+                "run",
+                response_path,
+            ],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        if run_id:
+            with _process_runs_lock:
+                _process_runs[run_id] = process
+        stdout, stderr = process.communicate(payload)
+        if process.returncode != 0:
+            raise RuntimeError(
+                "libterraform worker process failed "
+                f"with exit code {process.returncode}: "
+                f"{stderr.decode('utf-8', errors='replace')}"
+                f"{stdout.decode('utf-8', errors='replace')}"
+            )
+        with open(response_path, "rb") as f:
+            status, value = pickle.load(f)
+        if status == "error":
+            raise value
+        retcode, stdout_text, stderr_text = value
+        if check and retcode not in (0, 2):
+            raise TerraformCommandError(retcode, argv, stdout_text, stderr_text)
+        return retcode, stdout_text, stderr_text
+    finally:
+        if run_id:
+            with _process_runs_lock:
+                _process_runs.pop(run_id, None)
+        if response_path:
+            try:
+                os.unlink(response_path)
+            except FileNotFoundError:
+                pass
+
+
+def _open_process_stream(argv, run_id):
+    payload = pickle.dumps({"argv": argv}, protocol=pickle.HIGHEST_PROTOCOL)
+    process = subprocess.Popen(
+        [
+            sys.executable,
+            "-m",
+            "libterraform._process_worker",
+            "stream",
+            run_id,
+        ],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    assert process.stdin is not None
+    process.stdin.write(payload)
+    process.stdin.close()
+    return process
+
+
 def _drain_fd(fd):
     """Read a file descriptor to EOF and return its text."""
     with os.fdopen(fd, encoding="utf-8") as f:
@@ -129,9 +271,8 @@ def _merge_var_options(options, vars, var_files):
         options["var_file"] = var_files
 
 
-# Streaming methods return a TerraformStream (an iterator, not a value), so they
-# are handled specially by the async wrapper and excluded from the process pool
-# (a live stream cannot cross a process boundary).
+# Streaming methods return a TerraformStream (an iterator, not a value), so the
+# async wrapper handles them specially and the process pool omits them.
 _STREAM_METHODS = frozenset({"stream", "plan_stream", "apply_stream"})
 
 
@@ -225,10 +366,11 @@ class TerraformStream:
     cooperative cancellation explicitly.
     """
 
-    def __init__(self, argv, json=True, check=False):
+    def __init__(self, argv, json=True, check=False, backend=_THREAD_BACKEND):
         self._argv = argv
         self._json = json
         self._check = check
+        self._backend = _normalize_backend(backend)
         self._run_id = uuid.uuid4().hex
         self.retcode: Optional[int] = None
         self.stderr: Optional[str] = None
@@ -238,6 +380,7 @@ class TerraformStream:
         self._stderr_result: list = []
         self._cli_thread: Optional[Thread] = None
         self._stderr_thread: Optional[Thread] = None
+        self._process: Optional[subprocess.Popen] = None
 
     def __iter__(self) -> "TerraformStream":
         return self
@@ -262,6 +405,24 @@ class TerraformStream:
 
     def _start(self):
         self._started = True
+        if self._backend == _PROCESS_BACKEND:
+            self._process = _open_process_stream(self._argv, self._run_id)
+            assert self._process.stdout is not None
+            assert self._process.stderr is not None
+            process_stderr = self._process.stderr
+            self._f = open(
+                self._process.stdout.fileno(),
+                encoding="utf-8",
+                closefd=False,
+            )
+            self._stderr_thread = Thread(
+                target=lambda: self._stderr_result.append(
+                    process_stderr.read().decode("utf-8")
+                ),
+                daemon=True,
+            )
+            self._stderr_thread.start()
+            return
         r_stdout_fd, w_stdout_fd = os.pipe()
         r_stderr_fd, w_stderr_fd = os.pipe()
         self._f = os.fdopen(r_stdout_fd, encoding="utf-8")
@@ -279,8 +440,13 @@ class TerraformStream:
         self.retcode = _invoke_cli(self._argv, w_stdout_fd, w_stderr_fd, self._run_id)
 
     def _join(self):
-        assert self._cli_thread is not None and self._stderr_thread is not None
-        self._cli_thread.join()
+        assert self._stderr_thread is not None
+        if self._backend == _PROCESS_BACKEND:
+            assert self._process is not None
+            self.retcode = self._process.wait()
+        else:
+            assert self._cli_thread is not None
+            self._cli_thread.join()
         self._stderr_thread.join()
         self.stderr = self._stderr_result[0] if self._stderr_result else ""
         if self._f is not None:
@@ -299,6 +465,13 @@ class TerraformStream:
 
     def cancel(self):
         """Request cooperative cancellation of the running command."""
+        if self._backend == _PROCESS_BACKEND:
+            if self._process is not None and self._process.poll() is None:
+                if WINDOWS:
+                    self._process.terminate()
+                else:
+                    self._process.send_signal(2)
+            return
         _cancel_cli_run(self._run_id)
 
     def close(self):
@@ -331,8 +504,9 @@ class TerraformCommand:
     https://developer.hashicorp.com/terraform
     """
 
-    def __init__(self, cwd=None):
+    def __init__(self, cwd=None, backend=_PROCESS_BACKEND):
         self.cwd = cwd
+        self.backend = _normalize_backend(backend)
 
     @classmethod
     def run(
@@ -343,6 +517,7 @@ class TerraformCommand:
         chdir=None,
         check: bool = False,
         json=False,
+        backend: str = _PROCESS_BACKEND,
     ) -> Tuple[int, str, str]:
         """
         Run command with args and return a tuple (retcode, stdout, stderr).
@@ -369,35 +544,45 @@ class TerraformCommand:
         :param chdir: Switch to a different working directory before executing the given subcommand.
         :param check: Whether to check return code.
         :param json: Whether to load stdout as json. Only partial commands support json param.
+        :param backend: Execution backend. Defaults to ``"process"`` for
+            process-isolated execution. Use ``"thread"`` to run inside the
+            current process.
         :return: Command result tuple (retcode, stdout, stderr).
         """
+        return cls._run_with_backend(cmd, args, options, chdir, check, json, backend)
+
+    def _run(
+        self,
+        cmd: CmdType,
+        args: Optional[Sequence[str]] = None,
+        options: Optional[dict] = None,
+        chdir=None,
+        check: bool = False,
+        json=False,
+        backend: str = None,
+    ) -> Tuple[int, str, str]:
+        selected_backend = backend or self.backend
+        if selected_backend == _PROCESS_BACKEND:
+            return type(self).run(
+                cmd, args=args, options=options, chdir=chdir, check=check, json=json
+            )
+        return type(self).run(
+            cmd,
+            args=args,
+            options=options,
+            chdir=chdir,
+            check=check,
+            json=json,
+            backend=selected_backend,
+        )
+
+    @staticmethod
+    def _run_with_backend(cmd, args, options, chdir, check, json, backend):
+        selected_backend = _normalize_backend(backend)
         argv = _build_argv(cmd, args, options, chdir, json)
-        r_stdout_fd, w_stdout_fd = os.pipe()
-        r_stderr_fd, w_stderr_fd = os.pipe()
-
-        stdout_buffer = []
-        stderr_buffer = []
-        stdout_thread = Thread(target=cls._fdread, args=(r_stdout_fd, stdout_buffer))
-        stdout_thread.daemon = True
-        stdout_thread.start()
-        stderr_thread = Thread(target=cls._fdread, args=(r_stderr_fd, stderr_buffer))
-        stderr_thread.daemon = True
-        stderr_thread.start()
-
-        retcode = _invoke_cli(argv, w_stdout_fd, w_stderr_fd, _current_run_id.get())
-
-        stdout_thread.join()
-        stderr_thread.join()
-        if not stdout_buffer:
-            raise TerraformFdReadError(fd=r_stdout_fd)
-        if not stderr_buffer:
-            raise TerraformFdReadError(fd=r_stderr_fd)
-        stdout = stdout_buffer[0]
-        stderr = stderr_buffer[0]
-
-        if check and retcode not in (0, 2):
-            raise TerraformCommandError(retcode, argv, stdout, stderr)
-        return retcode, stdout, stderr
+        if selected_backend == _THREAD_BACKEND:
+            return _run_argv_in_process(argv, check)
+        return _run_argv_in_subprocess(argv, check)
 
     @staticmethod
     def _fdread(std_fd, std_buffer):
@@ -428,7 +613,7 @@ class TerraformCommand:
         :param check: Whether to raise on a non ``0``/``2`` exit code at the end.
         """
         argv = _build_argv(cmd, args, options, chdir, json)
-        return TerraformStream(argv, json=json, check=check)
+        return TerraformStream(argv, json=json, check=check, backend=self.backend)
 
     def plan_stream(
         self,
@@ -484,7 +669,7 @@ class TerraformCommand:
         :param json: Whether to load stdout as json.
         :param options: More command options.
         """
-        retcode, stdout, stderr = self.run(
+        retcode, stdout, stderr = self._run(
             "version", options=options, check=check, json=json
         )
         value = json_loads(stdout) if json else stdout
@@ -597,7 +782,7 @@ class TerraformCommand:
             ),
             create_default_workspace=create_default_workspace,
         )
-        retcode, stdout, stderr = self.run(
+        retcode, stdout, stderr = self._run(
             "init", options=options, chdir=self.cwd, check=check
         )
         return CommandResult(retcode, stdout, stderr)
@@ -659,7 +844,7 @@ class TerraformCommand:
             var=vars,
             var_file=var_files,
         )
-        retcode, stdout, stderr = self.run(
+        retcode, stdout, stderr = self._run(
             "validate", options=options, chdir=self.cwd, check=check, json=json
         )
         value = json_loads(stdout) if json else stdout
@@ -770,7 +955,7 @@ class TerraformCommand:
             parallelism=parallelism,
             state=state,
         )
-        retcode, stdout, stderr = self.run(
+        retcode, stdout, stderr = self._run(
             "plan", options=options, chdir=self.cwd, check=check, json=json
         )
         value = json_loads(stdout, split=True) if json else stdout
@@ -811,7 +996,7 @@ class TerraformCommand:
             generate_config_out=generate_config_out,
             no_color=flag(no_color),
         )
-        retcode, stdout, stderr = self.run(
+        retcode, stdout, stderr = self._run(
             "query", options=options, chdir=self.cwd, check=check, json=json
         )
         value = json_loads(stdout, split=True) if json else stdout
@@ -849,7 +1034,7 @@ class TerraformCommand:
             var_file=var_files,
         )
         args = [path] if path else None
-        retcode, stdout, stderr = self.run(
+        retcode, stdout, stderr = self._run(
             "show", args, options=options, chdir=self.cwd, check=check, json=json
         )
         value = json_loads(stdout) if json else stdout
@@ -939,7 +1124,7 @@ class TerraformCommand:
             var_file=var_files,
         )
         args = [plan] if plan else None
-        retcode, stdout, stderr = self.run(
+        retcode, stdout, stderr = self._run(
             "apply", args, options=options, chdir=self.cwd, check=check, json=json
         )
         value = json_loads(stdout, split=True) if json else stdout
@@ -1009,7 +1194,7 @@ class TerraformCommand:
             state=state,
             state_out=state_out,
         )
-        retcode, stdout, stderr = self.run(
+        retcode, stdout, stderr = self._run(
             "destroy", options=options, chdir=self.cwd, check=check, json=json
         )
         value = json_loads(stdout, split=True) if json else stdout
@@ -1072,7 +1257,7 @@ class TerraformCommand:
                 args = [dir]
         else:
             args = None
-        retcode, stdout, stderr = self.run(
+        retcode, stdout, stderr = self._run(
             "fmt", args, options=options, chdir=self.cwd, check=check
         )
         return CommandResult(retcode, stdout, stderr, json=False)
@@ -1105,7 +1290,7 @@ class TerraformCommand:
             force=flag(force),
         )
         args = [lock_id]
-        retcode, stdout, stderr = self.run(
+        retcode, stdout, stderr = self._run(
             "force-unlock", args, options=options, chdir=self.cwd, check=check
         )
         return CommandResult(retcode, stdout, stderr, json=False)
@@ -1151,7 +1336,7 @@ class TerraformCommand:
             var=vars,
             var_file=var_files,
         )
-        retcode, stdout, stderr = self.run(
+        retcode, stdout, stderr = self._run(
             "get", options=options, chdir=self.cwd, check=check
         )
         return CommandResult(retcode, stdout, stderr, json=False)
@@ -1216,7 +1401,7 @@ class TerraformCommand:
             var=vars,
             var_file=var_files,
         )
-        retcode, stdout, stderr = self.run(
+        retcode, stdout, stderr = self._run(
             "graph", options=options, chdir=self.cwd, check=check
         )
         return CommandResult(retcode, stdout, stderr, json=False)
@@ -1296,7 +1481,7 @@ class TerraformCommand:
             ignore_remote_version=flag(ignore_remote_version),
         )
         args = [addr, id]
-        retcode, stdout, stderr = self.run(
+        retcode, stdout, stderr = self._run(
             "import", args, options=options, chdir=self.cwd, check=check
         )
         return CommandResult(retcode, stdout, stderr, json=False)
@@ -1335,7 +1520,7 @@ class TerraformCommand:
             raw=flag(raw),
         )
         args = [name] if name else None
-        retcode, stdout, stderr = self.run(
+        retcode, stdout, stderr = self._run(
             "output", args, options=options, chdir=self.cwd, check=check, json=json
         )
         value = json_loads(stdout) if json else stdout
@@ -1367,7 +1552,7 @@ class TerraformCommand:
             var=vars,
             var_file=var_files,
         )
-        retcode, stdout, stderr = self.run(
+        retcode, stdout, stderr = self._run(
             "modules", options=options, chdir=self.cwd, check=check, json=json
         )
         value = json_loads(stdout) if json else stdout
@@ -1407,7 +1592,7 @@ class TerraformCommand:
         cmd = ["providers"]
         if subcmd:
             cmd.append(subcmd)
-        retcode, stdout, stderr = self.run(
+        retcode, stdout, stderr = self._run(
             cmd, args=args, options=options, chdir=self.cwd, check=check, json=json
         )
         value = json_loads(stdout) if json else stdout
@@ -1595,7 +1780,7 @@ class TerraformCommand:
             no_color=flag(no_color),
             parallelism=parallelism,
         )
-        retcode, stdout, stderr = self.run(
+        retcode, stdout, stderr = self._run(
             "refresh", options=options, chdir=self.cwd, check=check, json=json
         )
         value = json_loads(stdout, split=True) if json else stdout
@@ -1635,7 +1820,7 @@ class TerraformCommand:
             no_color=flag(no_color),
         )
         cmd = ["state", subcmd]
-        retcode, stdout, stderr = self.run(
+        retcode, stdout, stderr = self._run(
             cmd, args=args, options=options, chdir=self.cwd, check=check, json=json
         )
         value = json_loads(stdout) if json else stdout
@@ -1798,7 +1983,7 @@ class TerraformCommand:
             no_color=flag(no_color),
         )
         cmd = ["state", "pull"]
-        retcode, stdout, stderr = self.run(
+        retcode, stdout, stderr = self._run(
             cmd, options=options, chdir=self.cwd, check=check
         )
         json = retcode == 0
@@ -2000,7 +2185,7 @@ class TerraformCommand:
             no_color=flag(no_color),
             plugin_cache_dir=plugin_cache_dir,
         )
-        retcode, stdout, stderr = self.run(
+        retcode, stdout, stderr = self._run(
             "stacks", args=args, options=options, chdir=self.cwd, check=check
         )
         return CommandResult(retcode, stdout, stderr)
@@ -2059,7 +2244,7 @@ class TerraformCommand:
             lock_timeout=lock_timeout,
             ignore_remote_version=flag(ignore_remote_version),
         )
-        retcode, stdout, stderr = self.run(
+        retcode, stdout, stderr = self._run(
             "taint", args=[addr], options=options, chdir=self.cwd, check=check
         )
         return CommandResult(retcode, stdout, stderr)
@@ -2109,7 +2294,7 @@ class TerraformCommand:
             lock_timeout=lock_timeout,
             ignore_remote_version=flag(ignore_remote_version),
         )
-        retcode, stdout, stderr = self.run(
+        retcode, stdout, stderr = self._run(
             "untaint", args=[addr], options=options, chdir=self.cwd, check=check
         )
         return CommandResult(retcode, stdout, stderr)
@@ -2181,7 +2366,7 @@ class TerraformCommand:
             verbose=flag(verbose),
             allow_deferral=flag(allow_deferral),
         )
-        retcode, stdout, stderr = self.run(
+        retcode, stdout, stderr = self._run(
             "test", options=options, chdir=self.cwd, check=check, json=json
         )
         value = json_loads(stdout, split=True) if json else stdout
@@ -2209,7 +2394,7 @@ class TerraformCommand:
             no_color=flag(no_color),
         )
         cmd = ["workspace", subcmd]
-        retcode, stdout, stderr = self.run(
+        retcode, stdout, stderr = self._run(
             cmd, args=args, options=options, chdir=self.cwd, check=check
         )
         return CommandResult(retcode, stdout, stderr)
@@ -2330,3 +2515,27 @@ class TerraformCommand:
         return self.workspace(
             "delete", args=[name], check=check, no_color=no_color, **options
         )
+
+
+class ProcessTerraformCommand(TerraformCommand):
+    """Terraform command API using process-isolated execution."""
+
+    def __init__(self, cwd=None):
+        super().__init__(cwd=cwd, backend=_PROCESS_BACKEND)
+
+    @classmethod
+    def run(cls, *args, **kwargs):
+        kwargs.setdefault("backend", _PROCESS_BACKEND)
+        return super().run(*args, **kwargs)
+
+
+class ThreadTerraformCommand(TerraformCommand):
+    """Terraform command API using the current Python process."""
+
+    def __init__(self, cwd=None):
+        super().__init__(cwd=cwd, backend=_THREAD_BACKEND)
+
+    @classmethod
+    def run(cls, *args, **kwargs):
+        kwargs.setdefault("backend", _THREAD_BACKEND)
+        return super().run(*args, **kwargs)

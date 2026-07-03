@@ -5,9 +5,11 @@
 ```python
 from libterraform import (
     AsyncTerraformCommand,
+    ProcessTerraformCommand,
     TerraformCommand,
     TerraformConfig,
     TerraformPool,
+    ThreadTerraformCommand,
 )
 ```
 
@@ -15,8 +17,8 @@ from libterraform import (
 
 ## 页面
 
-- [TerraformCommand](terraform-command.md)：命令执行、`CommandResult`、
-  参数转换、JSON 解析和 Terraform CLI 辅助方法。
+- [TerraformCommand](terraform-command.md)：命令执行、process/thread backend、
+  `CommandResult`、参数转换、JSON 解析和 Terraform CLI 辅助方法。
 - [AsyncTerraformCommand](async-terraform-command.md)：面向 asyncio 应用的异步
   兼容命令执行。
 - [TerraformPool](terraform-pool.md)：基于多进程的 Terraform 命令并行执行。

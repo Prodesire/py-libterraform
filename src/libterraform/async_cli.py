@@ -22,16 +22,17 @@ class AsyncTerraformCommand:
     This class mirrors `TerraformCommand` and awaits the
     Terraform call without blocking the event loop.
 
-    By default the synchronous call runs in a worker thread, so Terraform CLI
-    execution is still serialized inside the shared library because Terraform
-    uses process-wide state. Pass a `TerraformPool` as
-    ``pool`` to run commands in worker processes instead, which gives true
-    parallel Terraform execution.
+    By default the synchronous call uses process-isolated execution so Terraform's
+    process-wide state does not leak into the caller process. Use
+    ``backend="thread"`` to run through the current process, or pass a
+    `TerraformPool` as ``pool`` to reuse worker processes for true parallel
+    Terraform execution.
 
-    Cancelling the awaiting coroutine requests cooperative cancellation for the
-    corresponding Terraform run. With a thread backend the worker thread is not
-    terminated directly; with a process pool the owning worker is asked to
-    interrupt Terraform through its normal shutdown handling.
+    Cancelling the awaiting coroutine requests cancellation for the corresponding
+    Terraform run. With the process backend the worker process is interrupted;
+    with a thread backend the worker thread is not terminated directly; with a
+    process pool the owning worker is asked to interrupt Terraform through its
+    normal shutdown handling.
     """
 
     def __init__(
@@ -39,11 +40,13 @@ class AsyncTerraformCommand:
         cwd=None,
         executor: Optional[Executor] = None,
         pool: Optional[TerraformPool] = None,
+        backend: str = "process",
     ):
         self.cwd = cwd
         self.executor = executor
         self._pool = pool
-        self._sync_cli = TerraformCommand(cwd)
+        self.backend = backend
+        self._sync_cli = TerraformCommand(cwd, backend=backend)
 
     def __getattr__(self, name: str) -> Any:
         if name.startswith("_"):
@@ -103,6 +106,7 @@ class AsyncTerraformCommand:
         json=False,
         executor: Optional[Executor] = None,
         pool: Optional[TerraformPool] = None,
+        backend: str = "process",
     ) -> Tuple[int, str, str]:
         """Run command with args without blocking the event loop."""
 
@@ -126,6 +130,7 @@ class AsyncTerraformCommand:
             chdir=chdir,
             check=check,
             json=json,
+            backend=backend,
             executor=executor,
         )
 

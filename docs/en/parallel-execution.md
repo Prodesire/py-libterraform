@@ -1,18 +1,17 @@
 # Parallel Execution
 
-`TerraformCommand` is safe to call from multiple Python threads, but Terraform
-CLI execution is serialized inside one Python process: Terraform reuses
-process-wide state (working directory, stdio, plugin clients, signal handling),
-so the shared library runs one command at a time. `AsyncTerraformCommand` keeps
-an asyncio event loop responsive, but it does not make Terraform itself run in
-parallel inside that process either.
+`TerraformCommand` and `AsyncTerraformCommand` use process-isolated execution by
+default because Terraform reuses process-wide state (working directory, stdio,
+plugin clients, signal handling). That default prevents Terraform's temporary
+global-state changes from leaking into the caller process.
 
-`TerraformPool` is the built-in way to get true parallel Terraform operations. It
-owns a `ProcessPoolExecutor` and runs each command in its own worker process, so
-independent module operations run at the same time. Each worker imports
-`libterraform`, builds its own `TerraformCommand`, and runs one command against
-one module directory; command results and `check=True` errors come back to the
-parent process unchanged.
+Use `backend="thread"` only when you knowingly want Terraform to run inside one Python process with the caller.
+
+`TerraformPool` is the built-in way to reuse worker processes and get true parallel Terraform operations. It owns a `ProcessPoolExecutor` and runs each
+command in its own worker process, so independent module operations run at the
+same time. Each worker imports `libterraform`, builds its own thread-backend
+`TerraformCommand`, and runs one command against one module directory; command
+results and `check=True` errors come back to the parent process unchanged.
 
 ## Before you start
 
@@ -139,9 +138,9 @@ See [TerraformPool](api/terraform-pool.md) for the full API.
 
 ### Stay responsive on the event loop
 
-By default `AsyncTerraformCommand` runs the blocking call in a worker thread. That
-keeps the event loop responsive, but Terraform CLI execution is still serialized
-inside the process:
+By default `AsyncTerraformCommand` runs the Terraform call in a worker process.
+That keeps the event loop responsive and prevents Terraform's process-wide state
+from leaking into the event-loop process:
 
 ```python
 from libterraform import AsyncTerraformCommand
@@ -152,10 +151,11 @@ validation = await cli.validate(check=True)
 
 ### Run commands in parallel with a pool
 
-To combine asyncio with true parallelism, pass a `TerraformPool` as the `pool`
-backend. Awaited commands then run in the pool's worker processes, so awaiting
-several of them concurrently gives genuine parallel Terraform execution. The same
-`__main__` guard applies, and the async entry point is `asyncio.run(main())`:
+To amortize worker startup and combine asyncio with true parallelism, pass a
+`TerraformPool` as the `pool` backend. Awaited commands then run in the pool's
+worker processes, so awaiting several of them concurrently gives genuine
+parallel Terraform execution. The same `__main__` guard applies, and the async
+entry point is `asyncio.run(main())`:
 
 ```python
 import asyncio
@@ -190,10 +190,10 @@ with TerraformPool(max_workers=4) as pool:
 
 ### Cancel an awaited command
 
-Cancelling the awaiting task requests cooperative cancellation for the run. With
-the default thread backend the worker thread is not terminated directly; with a
-`pool` backend the request is delivered to the worker process running the
-command:
+Cancelling the awaiting task requests cancellation for the run. With the default
+process backend the worker process is interrupted; with `backend="thread"` the
+worker thread is not terminated directly; with a `pool` backend the request is
+delivered to the worker process running the command:
 
 ```python
 task = asyncio.create_task(cli.apply(auto_approve=True))

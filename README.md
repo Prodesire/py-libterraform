@@ -27,10 +27,11 @@
 pip install libterraform
 ```
 
-> **Threading:** `TerraformCommand` can be called from multiple Python threads,
-> but Terraform CLI execution is serialized inside the shared library because
-> Terraform uses process-wide state. Use `TerraformPool` (or separate processes)
-> if you need truly parallel Terraform operations.
+> **Execution model:** `TerraformCommand` and `AsyncTerraformCommand` use
+> process-isolated execution by default, so Terraform's process-wide state does
+> not leak into the caller process. Use `backend="thread"` only when you
+> explicitly want the current-process backend. Use `TerraformPool` when you want
+> to reuse worker processes or run independent Terraform operations in parallel.
 
 ## Usage
 
@@ -56,8 +57,8 @@ cli = AsyncTerraformCommand("path/to/module")
 await cli.validate(check=True)
 ```
 
-Use `TerraformPool` to run Terraform commands in parallel across worker
-processes:
+Use `TerraformPool` to reuse worker processes and run Terraform commands in
+parallel:
 
 ```python
 from libterraform import TerraformPool

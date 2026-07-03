@@ -3,7 +3,7 @@ from ctypes import c_void_p, cdll
 
 from libterraform.common import WINDOWS
 
-__version__ = "0.15.2"
+__version__ = "0.15.3"
 
 root = os.path.dirname(os.path.abspath(__file__))
 _lib_filename = "libterraform.dll" if WINDOWS else "libterraform.so"
@@ -17,8 +17,10 @@ from .cli import (  # noqa: E402
     ApplyResult,
     CommandResult,
     PlanResult,
+    ProcessTerraformCommand,
     TerraformCommand,
     TerraformStream,
+    ThreadTerraformCommand,
 )
 from .async_cli import AsyncTerraformCommand  # noqa: E402
 from .config import TerraformConfig  # noqa: E402
@@ -32,9 +34,11 @@ __all__ = [
     "CommandResult",
     "OutputChange",
     "PlanResult",
+    "ProcessTerraformCommand",
     "ResourceChange",
     "TerraformCommand",
     "TerraformConfig",
     "TerraformPool",
     "TerraformStream",
+    "ThreadTerraformCommand",
 ]

@@ -23,7 +23,7 @@ binary.
 
 | Tool | Integration model | Best fit | Tradeoffs |
 |---|---|---|---|
-| `libterraform` | Bundled Terraform shared library loaded by Python | Python automation, control planes, internal platforms, and tools that need Terraform available without installing a separate binary | Wheels are larger; each release line embeds one Terraform version line; Terraform CLI execution is serialized inside one Python process |
+| `libterraform` | Bundled Terraform shared library loaded by Python | Python automation, control planes, internal platforms, and tools that need Terraform available without installing a separate binary | Wheels are larger; each release line embeds one Terraform version line; default process isolation starts worker processes |
 | `python-terraform` | Wrapper around an installed `terraform` CLI | Existing scripts that already have Terraform installed and only need a light command wrapper | Depends on an external binary; returns raw process output; the upstream project has had long maintenance gaps |
 | TofuPy | Wrapper around installed OpenTofu or Terraform binaries | Teams that want a modern Python wrapper and need OpenTofu support | Still requires `tofu` or `terraform` on `PATH`; it wraps the executable rather than embedding Terraform into the Python package |
 | Direct `subprocess` | Your code shells out to `terraform` directly | Small scripts, CI jobs, and cases where explicit process control is enough | You own argument conversion, JSON parsing, error handling, streaming, cancellation, and binary management |
@@ -46,8 +46,8 @@ runtime capability of the application:
   `TerraformConfig`, without invoking a CLI command.
 - Async applications need awaitable Terraform calls while keeping the event loop
   responsive.
-- Independent module operations need process-isolated parallelism through
-  `TerraformPool`.
+- Independent module operations need reusable process workers or parallelism
+  through `TerraformPool`.
 
 ## When Another Option Fits Better
 
@@ -114,8 +114,8 @@ From `python-terraform` or `subprocess`, the main changes are:
 - Use `check=True` when failures should raise `TerraformCommandError`.
 - Use `json=False` when you need Terraform's plain text output instead of parsed
   structured values.
-- Use `TerraformPool` for true parallel execution across independent module
-  directories.
+- Use `TerraformPool` to reuse worker processes or run independent module
+  directories in parallel.
 
 ```python
 from libterraform import TerraformCommand

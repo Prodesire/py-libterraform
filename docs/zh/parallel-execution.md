@@ -1,15 +1,16 @@
 # 并行执行
 
-`TerraformCommand` 可以被多个 Python 线程安全调用，但在单个 Python 进程内，
-Terraform CLI 执行会被串行化：Terraform 复用进程级全局状态（工作目录、stdio、plugin
-客户端、信号处理），因此共享库一次只能执行一条命令。`AsyncTerraformCommand` 能让
-asyncio event loop 保持响应，但同样不会让 Terraform 在该进程内真正并行执行。
+`TerraformCommand` 和 `AsyncTerraformCommand` 默认使用进程隔离执行，因为 Terraform
+复用进程级全局状态（工作目录、stdio、plugin 客户端、信号处理）。默认 backend 可以
+避免 Terraform 临时修改的全局状态泄漏到调用方进程。
 
-`TerraformPool` 是内置的、用于获得真正并行 Terraform 操作的方式。它持有一个
-`ProcessPoolExecutor`，让每条命令运行在独立的 worker 进程中，从而让相互独立的模块
-操作同时执行。每个 worker 都会导入 `libterraform`，构建自己的 `TerraformCommand`，并
-针对单个模块目录运行一条命令；命令结果以及 `check=True` 抛出的错误会原样返回给
-父进程。
+只有在明确希望 Terraform 与调用方运行在单个 Python 进程中时，才使用 `backend="thread"`。
+
+`TerraformPool` 是内置的、用于复用 worker 进程并获得真正并行 Terraform 操作的方式。
+它持有一个 `ProcessPoolExecutor`，让每条命令运行在独立的 worker 进程中，从而让相互
+独立的模块操作同时执行。每个 worker 都会导入 `libterraform`，构建自己的 thread-backend
+`TerraformCommand`，并针对单个模块目录运行一条命令；命令结果以及 `check=True` 抛出的
+错误会原样返回给父进程。
 
 ## 准备
 
@@ -128,8 +129,8 @@ with TerraformPool(max_workers=2) as pool:
 
 ### 保持 event loop 响应
 
-`AsyncTerraformCommand` 默认把阻塞调用放到 worker thread 中执行。这能让 event loop
-保持响应，但 Terraform CLI 执行在进程内仍是串行的：
+`AsyncTerraformCommand` 默认把 Terraform 调用放到 worker 进程中执行。这能让 event
+loop 保持响应，并避免 Terraform 的进程级全局状态泄漏到 event-loop 进程：
 
 ```python
 from libterraform import AsyncTerraformCommand
@@ -140,9 +141,10 @@ validation = await cli.validate(check=True)
 
 ### 用进程池并行执行命令
 
-要在 asyncio 中同时获得真正并行，可传入 `TerraformPool` 作为 `pool` 后端。此时被等待
-的命令会在 pool 的 worker 进程中执行，因此并发等待多条命令即可获得真正并行的
-Terraform 执行。同样需要 `__main__` 保护，异步入口为 `asyncio.run(main())`：
+要摊薄 worker 启动成本并在 asyncio 中获得真正并行，可传入 `TerraformPool` 作为
+`pool` 后端。此时被等待的命令会在 pool 的 worker 进程中执行，因此并发等待多条命令
+即可获得真正并行的 Terraform 执行。同样需要 `__main__` 保护，异步入口为
+`asyncio.run(main())`：
 
 ```python
 import asyncio
@@ -177,8 +179,9 @@ with TerraformPool(max_workers=4) as pool:
 
 ### 取消等待中的命令
 
-取消等待中的 task 会为该 run 请求协作式取消。使用默认线程后端时，不会直接终止
-worker thread；使用 `pool` 后端时，该请求会投递到运行该命令的 worker 进程：
+取消等待中的 task 会为该 run 请求取消。使用默认 process backend 时，worker 进程会被
+中断；使用 `backend="thread"` 时，不会直接终止 worker thread；使用 `pool` 后端时，
+该请求会投递到运行该命令的 worker 进程：
 
 ```python
 task = asyncio.create_task(cli.apply(auto_approve=True))

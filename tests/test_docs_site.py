@@ -239,7 +239,7 @@ def test_docs_include_0_15_version_mapping():
     chinese_policy = read_text("docs/zh/release-policy.md")
 
     for page in [english_index, chinese_index]:
-        assert "libterraform/0.15.2/" in page
+        assert "libterraform/0.15.3/" in page
         assert "terraform/tree/v1.15.5" in page
 
     assert "`0.15.x` | `1.15.x` | `release/0.15`" in english_policy

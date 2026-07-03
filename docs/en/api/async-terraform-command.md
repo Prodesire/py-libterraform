@@ -8,22 +8,25 @@ from libterraform import AsyncTerraformCommand
 
 `AsyncTerraformCommand` provides asyncio-compatible access to
 `TerraformCommand`. It mirrors the synchronous command methods and runs the
-blocking Terraform call in a worker thread, so callers can `await` Terraform
-operations without blocking the event loop.
+blocking Terraform call away from the event-loop thread, so callers can `await`
+Terraform operations without blocking the event loop.
 
 ## Execution Model
 
-By default `AsyncTerraformCommand` runs the blocking call in a worker thread, so
-it does not make Terraform CLI execution parallel inside one Python process.
-Terraform still uses process-wide state, so the shared library serializes CLI
-execution. Pass a [`TerraformPool`](terraform-pool.md) as `pool` to run commands
-in worker processes when you need true parallel Terraform operations.
+By default `AsyncTerraformCommand` uses `TerraformCommand`'s process backend. The
+Terraform CLI call runs in a controlled worker process, so Terraform's
+process-wide state does not leak into the event-loop process. Use
+`backend="thread"` only when you explicitly want the current-process backend.
+Pass a [`TerraformPool`](terraform-pool.md) as `pool` when you want to reuse
+worker processes or run independent Terraform operations in parallel.
 
-If a coroutine is cancelled, the awaiting task is cancelled, but the underlying
-worker thread is not terminated directly by this API. `AsyncTerraformCommand` sends a
-cooperative cancellation request to Terraform's shutdown channel and then
-re-raises `asyncio.CancelledError`. Terraform or a provider may still take some
-time to return from its own shutdown path.
+If a coroutine is cancelled, the awaiting task is cancelled and the active
+backend is asked to stop the Terraform run. With the default process backend the
+worker process is interrupted. With `backend="thread"`, the worker thread is not
+terminated directly; `AsyncTerraformCommand` sends a cooperative cancellation
+request to Terraform's shutdown channel and then re-raises
+`asyncio.CancelledError`. Terraform or a provider may still take some time to
+return from its own shutdown path.
 
 ## Usage
 
@@ -43,8 +46,9 @@ plan = await cli.plan(check=True)
 retcode, stdout, stderr = await AsyncTerraformCommand.run("version")
 ```
 
-Pass an executor when you need to integrate with an application-owned thread
-pool:
+Pass an executor when you need to integrate the awaitable wrapper with an
+application-owned thread pool. This controls where the blocking Python wrapper
+waits; it does not switch Terraform execution to the thread backend:
 
 ```python
 from concurrent.futures import ThreadPoolExecutor
@@ -52,6 +56,13 @@ from concurrent.futures import ThreadPoolExecutor
 with ThreadPoolExecutor(max_workers=1) as executor:
     cli = AsyncTerraformCommand("path/to/terraform/module", executor=executor)
     validation = await cli.validate(check=True)
+```
+
+To opt in to the current-process backend, pass `backend="thread"`:
+
+```python
+cli = AsyncTerraformCommand("path/to/terraform/module", backend="thread")
+validation = await cli.validate(check=True)
 ```
 
 Pass a `TerraformPool` as `pool` to await commands that run in worker processes,
@@ -79,10 +90,10 @@ task = asyncio.create_task(cli.apply(auto_approve=True))
 task.cancel()
 ```
 
-This asks Terraform to stop through its normal interrupt handling. With the
-default thread backend it is not a direct termination of the worker thread; with
-a `pool` backend the request is delivered to the worker process running the
-command.
+This asks Terraform to stop through the active backend. With the default process
+backend the worker process is interrupted; with `backend="thread"` it is not a
+direct termination of the worker thread; with a `pool` backend the request is
+delivered to the worker process running the command.
 
 ::: libterraform.async_cli.AsyncTerraformCommand
     options:

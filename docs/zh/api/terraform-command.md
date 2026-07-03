@@ -10,11 +10,18 @@ from libterraform import TerraformCommand
 方法。构造时可传入 `cwd` 作为默认 Terraform 工作目录。多数高层方法会返回
 `CommandResult`。
 
-## 线程说明
+## 执行 backend
 
-`TerraformCommand` 可以被多个 Python 线程调用。调用本身是线程安全的，但由于
-Terraform 使用进程级全局状态，共享库内部会串行执行 Terraform CLI。如需真正并行的
-Terraform 操作，请使用多个进程隔离。
+`TerraformCommand` 默认使用 `"process"` backend。每次 Terraform CLI 调用都会在受控
+worker 进程中执行，因此 Terraform 的进程级全局状态（`os.chdir`、stdio、信号处理、
+plugin 清理）不会泄漏到调用方进程。
+
+如果明确需要当前进程后端，可以使用 `TerraformCommand(cwd, backend="thread")` 或
+`TerraformCommand.run("version", backend="thread")`。thread backend 保留原来的低开销
+路径，并在每次调用结束后恢复全局状态；但命令运行期间，同一 Python 进程中的其他代码
+仍可能观察到 Terraform 临时切换后的工作目录。
+
+如果需要复用 worker 进程或让独立模块真正并行执行，请使用 `TerraformPool`。
 
 ## CommandResult
 
@@ -80,6 +87,7 @@ Terraform 操作，请使用多个进程隔离。
 | `chdir` | | 执行子命令前切换到指定目录，对应 Terraform 的 `-chdir`。 | `None` |
 | `check` | `bool` | 是否在异常返回码时抛出 `TerraformCommandError`。 | `False` |
 | `json` | | 是否追加 `-json`。仅部分命令支持此参数。 | `False` |
+| `backend` | `str` | 执行 backend。默认为 `"process"`；设置为 `"thread"` 可使用当前进程后端。 | `"process"` |
 
 ::: libterraform.cli.TerraformCommand.version
     options:

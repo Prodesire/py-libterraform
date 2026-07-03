@@ -79,7 +79,7 @@
     },
     {
       "libterraform_minor": "0.15",
-      "libterraform_version": "0.15.2",
+      "libterraform_version": "0.15.3",
       "terraform_minor": "1.15",
       "terraform_version": "1.15.5",
       "go_plugin_version": "1.7.0",
