@@ -117,12 +117,11 @@ cli = AsyncTerraformCommand(module_dir)
 validation = await cli.validate(check=True)
 ```
 
-默认情况下调用运行在 worker thread 中，因此 Terraform CLI 执行在共享库内部仍是
-串行的。取消 coroutine 会请求 Terraform 进入协作式 shutdown 流程，但不会直接终止
-worker thread。
+默认情况下 Terraform 调用运行在 worker 进程中，因此 Terraform 的进程级全局状态不会
+泄漏到 event-loop 进程。只有在明确需要当前进程后端时，才使用 `backend="thread"`。
+使用默认 backend 时，取消 coroutine 会中断 worker 进程。
 
-要让 Terraform 命令真正同时执行——跨多个模块、同步或异步——请见
-[并行执行](parallel-execution.md)，其中介绍了 `TerraformPool` 以及如何让
-`AsyncTerraformCommand` 运行在进程池上。
+如果需要复用 worker 进程，或让 Terraform 命令跨多个模块真正同时执行（同步或异步），
+请见[并行执行](parallel-execution.md)，其中介绍了 `TerraformPool`。
 
 完整接口见 [API 参考](api/index.md)。

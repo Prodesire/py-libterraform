@@ -121,13 +121,13 @@ cli = AsyncTerraformCommand(module_dir)
 validation = await cli.validate(check=True)
 ```
 
-By default the call runs in a worker thread, so Terraform CLI execution is still
-serialized inside the shared library. Cancelling the coroutine requests
-Terraform's cooperative shutdown path; it does not terminate the worker thread
-directly.
+By default the Terraform call runs in a worker process, so Terraform's
+process-wide state does not leak into the event-loop process. Use
+`backend="thread"` only when you explicitly want the current-process backend.
+Cancelling the coroutine interrupts the worker process for the default backend.
 
-To actually run Terraform commands at the same time — across modules, with sync
-or async APIs — see [Parallel Execution](parallel-execution.md), which covers
-`TerraformPool` and running `AsyncTerraformCommand` on a process pool.
+To reuse worker processes or run Terraform commands at the same time — across
+modules, with sync or async APIs — see [Parallel Execution](parallel-execution.md),
+which covers `TerraformPool`.
 
 See the [API Reference](api/index.md) for the generated interface documentation.

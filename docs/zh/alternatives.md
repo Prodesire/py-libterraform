@@ -19,7 +19,7 @@ Python 生态里有多种方式可以和 Terraform 协作。它们解决的问�
 
 | 工具 | 集成模型 | 适合场景 | 取舍 |
 |---|---|---|---|
-| `libterraform` | Python 加载内置的 Terraform 共享库 | Python 自动化、控制面、内部平台，以及不希望额外安装 Terraform binary 的工具 | wheel 更大；每个发布线内置一个 Terraform 版本线；同一 Python 进程内 Terraform CLI 执行会串行化 |
+| `libterraform` | Python 加载内置的 Terraform 共享库 | Python 自动化、控制面、内部平台，以及不希望额外安装 Terraform binary 的工具 | wheel 更大；每个发布线内置一个 Terraform 版本线；默认进程隔离会启动 worker 进程 |
 | `python-terraform` | 封装已安装的 `terraform` CLI | 已经安装 Terraform、只需要轻量命令封装的既有脚本 | 依赖外部 binary；主要返回进程输出；上游项目长期存在维护间隔 |
 | TofuPy | 封装已安装的 OpenTofu 或 Terraform binary | 希望使用现代 Python wrapper，并且需要 OpenTofu 支持的团队 | 仍要求 `tofu` 或 `terraform` 在 `PATH` 中；它封装的是可执行文件，而不是把 Terraform 嵌入 Python 包 |
 | 直接 `subprocess` | 业务代码直接启动 `terraform` 进程 | 小脚本、CI job，或显式进程控制已经足够的场景 | 参数转换、JSON 解析、错误处理、流式输出、取消和 binary 管理都需要自己维护 |
@@ -38,7 +38,7 @@ Python 生态里有多种方式可以和 Terraform 协作。它们解决的问�
   `stdout`、`stderr` 和退出码。
 - 工具需要通过 `TerraformConfig` 加载 Terraform 配置目录，而不执行 CLI 命令。
 - asyncio 应用需要可 `await` 的 Terraform 调用，同时保持 event loop 响应。
-- 独立模块操作需要通过 `TerraformPool` 做进程隔离的并行执行。
+- 独立模块操作需要通过 `TerraformPool` 复用 worker 进程或并行执行。
 
 ## 什么时候其他方案更合适
 
@@ -91,7 +91,7 @@ Terraform 版本线。如果应用需要其他 Terraform 版本线，请安装�
 - Terraform flag 通过 Python 关键字参数传入，CLI 中的 hyphen 使用 underscore。
 - 失败时希望抛出 `TerraformCommandError`，使用 `check=True`。
 - 需要 Terraform 原始文本输出时，使用 `json=False`；否则可以使用解析后的结构化值。
-- 对独立模块目录做真正并行执行时，使用 `TerraformPool`。
+- 需要复用 worker 进程或让独立模块目录并行执行时，使用 `TerraformPool`。
 
 ```python
 from libterraform import TerraformCommand

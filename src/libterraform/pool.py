@@ -122,7 +122,7 @@ def _invoke_method(cwd, name, args, kwargs, run_id):
     """Run a TerraformCommand instance method inside a worker process."""
 
     def call():
-        cli = TerraformCommand(cwd)
+        cli = TerraformCommand(cwd, backend="thread")
         return getattr(cli, name)(*args, **kwargs)
 
     return _run_with_cancel(run_id, call)
@@ -130,6 +130,8 @@ def _invoke_method(cwd, name, args, kwargs, run_id):
 
 def _invoke_run(args, kwargs, run_id):
     """Run TerraformCommand.run inside a worker process."""
+    kwargs = dict(kwargs)
+    kwargs.setdefault("backend", "thread")
     return _run_with_cancel(run_id, lambda: TerraformCommand.run(*args, **kwargs))
 
 

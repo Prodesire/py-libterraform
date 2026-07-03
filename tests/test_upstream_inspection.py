@@ -50,5 +50,5 @@ def test_inspection_cli_outputs_json():
 
     report = json.loads(output)
 
-    assert report["release_matrix"]["current"]["libterraform_version"] == "0.15.2"
+    assert report["release_matrix"]["current"]["libterraform_version"] == "0.15.3"
     assert "command_contract" in report
